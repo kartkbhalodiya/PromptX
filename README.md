@@ -55,24 +55,36 @@
 </tr>
 <tr>
 <td width="33%" align="center">
+<img src="https://raw.githubusercontent.com/lucide-icons/lucide/main/icons/key.svg" width="48" height="48"/>
+<h3>🔒 Secure API</h3>
+<p>Optional access-key protection with fast Gunicorn WSGI</p>
+</td>
+<td width="33%" align="center">
+<img src="https://raw.githubusercontent.com/lucide-icons/lucide/main/icons/clock.svg" width="48" height="48"/>
+<h3>💾 History Manager</h3>
+<p>Save, manage, and export your prompts to JSON locally</p>
+</td>
+<td width="33%" align="center">
+<img src="https://raw.githubusercontent.com/lucide-icons/lucide/main/icons/zap.svg" width="48" height="48"/>
+<h3>⚡ Zero-Latency Caching</h3>
+<p>DeepCopy LRU caches prevent redundant LLM billing</p>
+</td>
+</tr>
+<tr>
+<td width="33%" align="center">
+<img src="https://raw.githubusercontent.com/lucide-icons/lucide/main/icons/shield-check.svg" width="48" height="48"/>
+<h3>🔄 Auto Fallback</h3>
+<p>Switches to backup AI models automatically</p>
+</td>
+<td width="33%" align="center">
 <img src="https://raw.githubusercontent.com/lucide-icons/lucide/main/icons/target.svg" width="48" height="48"/>
 <h3>🎯 Intent Detection</h3>
 <p>Auto-detect prompt intent, tone & confidence level</p>
 </td>
 <td width="33%" align="center">
-<img src="https://raw.githubusercontent.com/lucide-icons/lucide/main/icons/clock.svg" width="48" height="48"/>
-<h3>💾 History Management</h3>
-<p>Save and reuse your best prompts locally</p>
-</td>
-<td width="33%" align="center">
-<img src="https://raw.githubusercontent.com/lucide-icons/lucide/main/icons/zap.svg" width="48" height="48"/>
-<h3>⚡ Lightning Fast</h3>
-<p>Minimal dependencies, instant responses</p>
-</td>
-<td width="33%" align="center">
-<img src="https://raw.githubusercontent.com/lucide-icons/lucide/main/icons/shield-check.svg" width="48" height="48"/>
-<h3>🔄 Auto Fallback</h3>
-<p>Switches to backup AI models automatically</p>
+<img src="https://raw.githubusercontent.com/lucide-icons/lucide/main/icons/activity.svg" width="48" height="48"/>
+<h3>📊 Quality Analysis</h3>
+<p>6-dimension scoring with beautiful visual heatmaps</p>
 </td>
 </tr>
 </table>
@@ -220,9 +232,10 @@ Prompt.ai/
 | Category | Technology |
 |----------|-----------|
 | **Frontend** | HTML5, CSS3, JavaScript (Vanilla) |
-| **Backend** | Flask (Python) |
-| **AI Model** | Google Gemini 2.0 Flash |
-| **Storage** | LocalStorage (Browser) |
+| **Backend** | Flask (Python), Gunicorn (WSGI) |
+| **AI Model** | Google Gemini 2.0 Flash (Primary) |
+| **Storage** | LocalStorage (Browser), LRU In-Memory Dict |
+| **Security** | Flask-Limiter, Regex Sanitization |
 | **Icons** | Lucide Icons |
 | **Fonts** | Inter, Orbitron |
 
@@ -294,6 +307,7 @@ HUGGINGFACE_API_KEY=your_huggingface_key_here
 
 # Server Config
 PORT=5000
+CLIENT_API_KEY=optional_custom_api_key_to_protect_your_backend
 ```
 
 **Get your free API keys:**
@@ -375,7 +389,9 @@ Gemini → OpenAI → DeepSeek → HuggingFace
 | 🧑‍💻 Animated CLI Boot Sequences (`start.sh` & `setup.sh`) | ✅ Complete |
 | 💾 Automatic Local Storage Prompt Tracking | ✅ Complete |
 | 🏗️ Mermaid.js Architecture & Detailed Constraint Engineering | ✅ Complete |
-| 📤 Export prompts to JSON/CSV | 🔜 Coming Soon |
+| 🚀 Gunicorn Production Server & LRU Sequence Caching | ✅ Complete |
+| 🔒 API Key Authentication & Input Sanitization | ✅ Complete |
+| 📤 Export prompts to JSON/CSV | ✅ Complete |
 | 📚 Prompt templates library | 🔜 Coming Soon |
 | 🤖 Add Claude (Anthropic) support | 💡 Planned |
 | 👥 Team collaboration features | 💡 Planned |
@@ -388,7 +404,21 @@ Gemini → OpenAI → DeepSeek → HuggingFace
 
 ---
 
-## 🆕 Recent Major Updates (v1.0.0)
+## 🆕 Recent Major Updates (v1.5.0)
+
+**Security & Production Enhancements:**
+- **Gunicorn WSGI**: Transitioned from the Flask development server to a stable, multi-worker Gunicorn configuration.
+- **Client Access Control**: Integrated `CLIENT_API_KEY` checking via an `@require_api_key` route decorator to prevent unauthorized backend usage.
+- **Robust Input Sanitization**: Added strict RegEx filters and rejection conditions to intercept dangerous prompt injections and control characters.
+- **Advanced Caching**: Developed a bespoke `DeepCopyLRUCache` object to memoize deterministic LLM tasks (like Intent Detection) and prevent repeat billing on identical queries.
+
+**Frontend Upgrades:**
+- Added a bottom **History Export** tool mapped to browser JSON blob generation.
+- Added a seamless API Key configuration GUI into the navigational sidebar, storing credentials securely in LocalStorage.
+
+---
+
+## 📅 Previous Updates (v1.0.0)
 
 **UI/UX Improvements:**
 - Pinned bottom chat-input interface with endless scrolling prompt body.
