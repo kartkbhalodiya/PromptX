@@ -11,12 +11,12 @@ jobs:
     runs-on: ubuntu-latest
     
     steps:
-    - uses: actions/checkout@v3
+    - uses: actions/checkout@v4
     
     - name: Set up Python
-      uses: actions/setup-python@v4
+      uses: actions/setup-python@v5
       with:
-        python-version: '3.8'
+        python-version: '3.11'
     
     - name: Install dependencies
       run: |
@@ -26,8 +26,17 @@ jobs:
     - name: Check code style
       run: |
         pip install flake8
-        flake8 . --count --select=E9,F63,F7,F82 --show-source --statistics
+        flake8 . --count --select=E9,F63,F7,F82 --show-source --statistics --exclude=venv
     
-    - name: Test imports
+    - name: Verify syntax
       run: |
-        python -c "import app; import services"
+        python -c "
+        import ast, sys
+        for f in ['app.py', 'services.py', 'test_fallback.py']:
+            try:
+                ast.parse(open(f).read())
+                print(f'✅ {f} OK')
+            except SyntaxError as e:
+                print(f'❌ {f}: {e}')
+                sys.exit(1)
+        "

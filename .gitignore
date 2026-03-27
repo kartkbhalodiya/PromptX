@@ -53,3 +53,14 @@ htmlcov/
 temp/
 tmp/
 .vercel
+
+# Node
+node_modules/
+
+# Windows
+Thumbs.db
+
+# Project Docs (per user request)
+SYSTEM-DESIGN.md
+CHANGELOG.md
+changelog.md

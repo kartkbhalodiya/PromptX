@@ -15,231 +15,127 @@
 </head>
 <body>
   <div class="gradient-bg"></div>
-  <div class="container">
-    <header>
-      <div class="logo">
-        <img src="Public/bob.gif" alt="Kirby" class="logo-icon">
-        <h1>PromptX</h1>
-      </div>
-      <p class="subtitle">Transform simple prompts into professional AI instructions</p>
-    </header>
+  
+  <!-- Sidebar -->
+  <aside class="sidebar" id="sidebar">
+    <div class="sidebar-header">
+      <img src="Public/bot-img.png" alt="PromptX" class="sidebar-logo">
+      <h2>PROMPTX</h2>
+      <button class="sidebar-close" id="sidebar-close">
+        <i data-lucide="x"></i>
+      </button>
+    </div>
+    
+    <button class="new-chat-btn" id="new-chat-btn">
+      <i data-lucide="plus"></i>
+      New Chat
+    </button>
+    
+    <nav class="sidebar-nav">
+      <button class="nav-item active" data-mode="enhance">
+        <i data-lucide="sparkles"></i>
+        <span>Enhance</span>
+      </button>
+      <button class="nav-item" data-mode="analyze">
+        <i data-lucide="activity"></i>
+        <span>Analyze</span>
+      </button>
+      <button class="nav-item" data-mode="compare">
+        <i data-lucide="git-compare"></i>
+        <span>Compare</span>
+      </button>
+      <button class="nav-item" data-mode="history">
+        <i data-lucide="clock"></i>
+        <span>History</span>
+      </button>
+    </nav>
+    
+    <div class="sidebar-settings" style="margin-top: auto; padding: 1.5rem 1rem 1rem 1rem; border-top: 1px solid var(--border);">
+      <label style="font-size: 0.8rem; color: var(--text-secondary); margin-bottom: 0.5rem; display: block;"><i data-lucide="key" style="width: 12px; height: 12px; display: inline; margin-bottom: -2px;"></i> API Key</label>
+      <input type="password" id="api-key-input" placeholder="Required if set on server" style="width: 100%; padding: 0.75rem; background: rgba(0,0,0,0.3); border: 1px solid var(--border); border-radius: 8px; color: var(--text-primary); font-size: 0.85rem;" />
+    </div>
+  </aside>
+  
+  <!-- Main Chat Area -->
+  <main class="chat-container">
+    <div class="chat-header">
+      <button class="sidebar-toggle" id="sidebar-toggle">
+        <i data-lucide="menu"></i>
+      </button>
+      <div class="chat-title">PromptX AI</div>
+    </div>
 
-    <div class="tabs">
-      <div class="tab-list">
-        <button class="tab-trigger active" data-tab="enhance">
-          <i data-lucide="sparkles"></i>
-          <span>Enhance</span>
-        </button>
-        <button class="tab-trigger" data-tab="analyze">
-          <i data-lucide="activity"></i>
-          <span>Analyze</span>
-        </button>
-        <button class="tab-trigger" data-tab="compare">
-          <i data-lucide="git-compare"></i>
-          <span>Compare</span>
-        </button>
-        <button class="tab-trigger" data-tab="history">
-          <i data-lucide="clock"></i>
-          <span>History</span>
-        </button>
-      </div>
-
-      <!-- ENHANCE TAB -->
-      <div class="tab-content active" id="enhance-tab">
-        <div class="main-card">
-          <div class="input-section">
-            <label class="input-label">Your Prompt</label>
-            <textarea id="original-prompt" placeholder="Write a blog post about AI..." rows="6"></textarea>
-            <div id="intent-badge" class="intent-badge hidden">
-              <span id="intent-text"></span>
+    <!-- Chat Messages -->
+    <div class="chat-messages" id="chat-messages">
+      <div class="welcome-screen" id="welcome-screen">
+        <img src="Public/bot-img.png" alt="PromptX" class="welcome-logo">
+        <h1>PROMPTX</h1>
+        <p>Transform your prompts with AI</p>
+        
+        <div class="quick-actions">
+          <button class="quick-action" data-action="enhance">
+            <i data-lucide="sparkles"></i>
+            <div>
+              <strong>Enhance Prompt</strong>
+              <span>Make it professional</span>
             </div>
-          </div>
-          
-          <div class="action-bar">
-            <button class="btn btn-ghost" id="clear-btn">
-              <i data-lucide="x"></i>
-              Clear
-            </button>
-            <button class="btn btn-primary" id="enhance-btn">
-              <i data-lucide="sparkles"></i>
-              Enhance Prompt
-            </button>
-          </div>
-          
-          <div class="output-section hidden" id="output-section">
-            <label class="input-label">Enhanced Result</label>
-            <div class="enhanced-output" id="enhanced-prompt"></div>
-            <div class="output-actions">
-              <button class="btn btn-ghost" id="copy-btn">
-                <i data-lucide="copy"></i>
-                Copy
-              </button>
-              <button class="btn btn-ghost" id="save-btn">
-                <i data-lucide="bookmark"></i>
-                Save
-              </button>
+          </button>
+          <button class="quick-action" data-action="analyze">
+            <i data-lucide="activity"></i>
+            <div>
+              <strong>Analyze Quality</strong>
+              <span>Get detailed scores</span>
             </div>
-          </div>
-        </div>
-      </div>
-
-      <!-- ANALYZE TAB -->
-      <div class="tab-content" id="analyze-tab">
-        <div class="main-card">
-          <h2 class="section-title">Quality Analysis</h2>
-          <textarea id="heatmap-prompt" placeholder="Enter prompt to analyze quality..." rows="5"></textarea>
-          <div class="action-bar" style="margin-top: 1rem; margin-bottom: 1.5rem;">
-            <button class="btn btn-primary" id="analyze-btn">
-              <i data-lucide="activity"></i>
-              Analyze Quality
-            </button>
-          </div>
-
-          <div id="heatmap-results" class="heatmap-results hidden">
-            <div class="score-display">
-              <div class="score-circle">
-                <span id="overall-score" class="score-value">0</span>
-                <span class="score-label">/ 10</span>
-              </div>
-              <div id="grade-badge" class="grade-badge">F</div>
+          </button>
+          <button class="quick-action" data-action="compare">
+            <i data-lucide="git-compare"></i>
+            <div>
+              <strong>Compare Variations</strong>
+              <span>A/B test prompts</span>
             </div>
-
-            <div class="metrics-grid">
-              <div class="metric-card">
-                <div class="metric-name">Clarity</div>
-                <div class="metric-bar">
-                  <div id="clarity-bar" class="metric-fill"></div>
-                </div>
-                <div id="clarity-score" class="metric-score">0/10</div>
-              </div>
-              <div class="metric-card">
-                <div class="metric-name">Specificity</div>
-                <div class="metric-bar">
-                  <div id="specificity-bar" class="metric-fill"></div>
-                </div>
-                <div id="specificity-score" class="metric-score">0/10</div>
-              </div>
-              <div class="metric-card">
-                <div class="metric-name">Structure</div>
-                <div class="metric-bar">
-                  <div id="structure-bar" class="metric-fill"></div>
-                </div>
-                <div id="structure-score" class="metric-score">0/10</div>
-              </div>
-              <div class="metric-card">
-                <div class="metric-name">Context</div>
-                <div class="metric-bar">
-                  <div id="context-bar" class="metric-fill"></div>
-                </div>
-                <div id="context-score" class="metric-score">0/10</div>
-              </div>
-              <div class="metric-card">
-                <div class="metric-name">Constraints</div>
-                <div class="metric-bar">
-                  <div id="constraints-bar" class="metric-fill"></div>
-                </div>
-                <div id="constraints-score" class="metric-score">0/10</div>
-              </div>
-              <div class="metric-card">
-                <div class="metric-name">Output Format</div>
-                <div class="metric-bar">
-                  <div id="output-format-bar" class="metric-fill"></div>
-                </div>
-                <div id="output-format-score" class="metric-score">0/10</div>
-              </div>
-            </div>
-
-            <div id="suggestions-container" class="suggestions-box">
-              <h3>💡 Suggestions</h3>
-              <div id="suggestions-list"></div>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      <!-- COMPARE TAB -->
-      <div class="tab-content" id="compare-tab">
-        <div class="main-card">
-          <h2 class="section-title">A/B Testing</h2>
-          <textarea id="abtest-prompt" placeholder="Enter prompt to generate variations..." rows="4"></textarea>
-          <div class="action-bar" style="margin-top: 1rem; margin-bottom: 1.5rem;">
-            <button class="btn btn-primary" id="generate-variations-btn">
-              <i data-lucide="zap"></i>
-              Generate Variations
-            </button>
-          </div>
-
-          <div id="variations-container" class="variations-container hidden">
-            <div class="variation-card" id="variation-concise">
-              <div class="variation-header">
-                <h3>📝 Concise</h3>
-                <span class="variation-badge">Short &amp; Direct</span>
-              </div>
-              <div class="variation-content"></div>
-              <div class="variation-stats">
-                <span>Quality: <strong class="quality-score">0/10</strong></span>
-                <span>Length: <strong class="length-stat">0</strong></span>
-              </div>
-              <button class="btn btn-ghost use-variation-btn" data-variation="concise">Use This</button>
-            </div>
-
-            <div class="variation-card" id="variation-detailed">
-              <div class="variation-header">
-                <h3>📚 Detailed</h3>
-                <span class="variation-badge">Comprehensive</span>
-              </div>
-              <div class="variation-content"></div>
-              <div class="variation-stats">
-                <span>Quality: <strong class="quality-score">0/10</strong></span>
-                <span>Length: <strong class="length-stat">0</strong></span>
-              </div>
-              <button class="btn btn-ghost use-variation-btn" data-variation="detailed">Use This</button>
-            </div>
-
-            <div class="variation-card" id="variation-structured">
-              <div class="variation-header">
-                <h3>🏗️ Structured</h3>
-                <span class="variation-badge">Organized</span>
-              </div>
-              <div class="variation-content"></div>
-              <div class="variation-stats">
-                <span>Quality: <strong class="quality-score">0/10</strong></span>
-                <span>Length: <strong class="length-stat">0</strong></span>
-              </div>
-              <button class="btn btn-ghost use-variation-btn" data-variation="structured">Use This</button>
-            </div>
-          </div>
-
-          <div id="recommendation-banner" class="recommendation-banner hidden">
-            <i data-lucide="award"></i>
-            <span id="recommendation-text"></span>
-          </div>
-        </div>
-      </div>
-
-      <!-- HISTORY TAB -->
-      <div class="tab-content" id="history-tab">
-        <div class="main-card">
-          <h2 class="section-title">Prompt History</h2>
-          <div class="search-container">
-            <i data-lucide="search"></i>
-            <input type="text" id="history-search" placeholder="Search history...">
-          </div>
-          <div id="history-list" class="history-list">
-            <div id="empty-history" class="empty-state">
-              <i data-lucide="clock" class="empty-icon"></i>
-              <h3>No history yet</h3>
-              <p>Enhanced prompts you save will appear here</p>
-            </div>
-          </div>
+          </button>
         </div>
       </div>
     </div>
-  </div>
+
+    <!-- Input Area -->
+    <div class="chat-input-container">
+      <div class="chat-input-wrapper">
+        <div class="custom-model-select" id="custom-model-select">
+          <div class="select-selected">
+            <i data-lucide="bot"></i> <span>Auto (Fallback)</span>
+            <i data-lucide="chevron-down" class="chevron"></i>
+          </div>
+          <div class="select-items select-hide">
+            <div data-value="auto" data-icon="bot" class="same-as-selected"><i data-lucide="bot"></i> <span>Auto (Fallback)</span></div>
+            <div data-value="gemini" data-icon="sparkles"><i data-lucide="sparkles"></i> <span>Gemini 2.0</span></div>
+            <div data-value="nvidia_mistral" data-icon="brain"><i data-lucide="brain"></i> <span>NVIDIA Mistral</span></div>
+            <div data-value="nvidia_qwen" data-icon="hexagon"><i data-lucide="hexagon"></i> <span>NVIDIA Qwen</span></div>
+            <div data-value="huggingface" data-icon="smile"><i data-lucide="smile"></i> <span>HuggingFace</span></div>
+          </div>
+        </div>
+        <textarea 
+          id="chat-input" 
+          placeholder="Message PromptX..."
+          rows="1"
+        ></textarea>
+        <button class="send-btn" id="send-btn" disabled>
+          <i data-lucide="arrow-up"></i>
+        </button>
+      </div>
+      <div class="input-footer">
+        <span class="mode-indicator" id="mode-indicator">Enhance Mode</span>
+      </div>
+    </div>
+  </main>
+
+
 
   <div id="toast-container" class="toast-container"></div>
 
   <script src="https://cdn.jsdelivr.net/npm/lucide@latest/dist/umd/lucide.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/dompurify/3.0.6/purify.min.js"></script>
   <script src="index.js"></script>
 </body>
 </html>

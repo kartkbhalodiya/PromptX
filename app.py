@@ -3,24 +3,62 @@ Production Flask Application - Gemini Powered
 Uses Google Gemini API instead of OpenAI
 """
 
+import logging
+from functools import wraps
+import re
 from flask import Flask, request, jsonify
 from flask_cors import CORS
 from dotenv import load_dotenv
 import os
+from flask_limiter import Limiter
+from flask_limiter.util import get_remote_address
 from google import genai
 from services import (
     detect_intent, apply_smart_template,
     analyze_quality_heatmap,
     generate_ab_variations, compare_variations,
-    save_version, get_versions, get_version_diff,
-    rollback_version, get_version_history_summary, compare_all_versions,
     get_client, generate_with_fallback
 )
 
 load_dotenv()
 
+logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(name)s - %(levelname)s - %(message)s')
+logger = logging.getLogger(__name__)
+
+def require_api_key(f):
+    @wraps(f)
+    def decorated_function(*args, **kwargs):
+        api_key = os.getenv('CLIENT_API_KEY')
+        if api_key:
+            client_key = request.headers.get('X-API-Key')
+            if client_key != api_key:
+                logger.warning(f"Unauthorized access attempt from {request.remote_addr}")
+                return jsonify({'error': 'Unauthorized: Invalid or missing API Key', 'success': False}), 401
+        return f(*args, **kwargs)
+    return decorated_function
+
+def sanitize_input(text):
+    """Basic protection against prompt injection and malicious characters"""
+    if not text: return text
+    lower = text.lower()
+    if "ignore all previous instructions" in lower or "ignore previous instructions" in lower:
+        return "" # returning empty prompts will trigger length validation
+    # Clean non-printable/control characters except newlines/tabs
+    sanitized = re.sub(r'[^\x20-\x7E\n\t]', '', str(text))
+    return sanitized.strip()
+
 app = Flask(__name__)
 CORS(app)
+
+# Security: Add Rate Limiting (10 requests per minute per IP limit)
+# NOTE: In-memory storage resets on each Vercel serverless cold start.
+# For persistent rate limiting, switch to Redis: storage_uri="redis://..."
+limiter = Limiter(
+    get_remote_address,
+    app=app,
+    default_limits=["200 per day", "50 per hour"],
+    storage_uri="memory://"
+)
 
 # ============================================================================
 # SYSTEM PROMPTS
@@ -43,9 +81,11 @@ Rules:
 - Do NOT explain your reasoning
 - Return ONLY the improved prompt
 - Maintain user's original intent
-- Do not make it excessively verbose unless needed
+- If the user's prompt is completely meaningless, gibberish, or too short to infer any intent, return ONLY this exact message: "⚠️ The prompt provided is too vague or completely meaningless. Please provide a clear request or more context to enhance."
+- Expand upon the user's specifications to make the prompt comprehensive, highly detailed, and rich in context.
 - Use emojis strategically for visual appeal
-- Structure with clear sections using headers and bullet points
+- Structure with clear sections, ample line breaks, headers, and bullet points to avoid dense blocks of text.
+- Provide robust constraints and formatting instructions, ensuring it covers all edge cases.
 - Make it visually scannable and professional"""
 
 # ============================================================================
@@ -111,31 +151,40 @@ def score_prompt(prompt):
 
 @app.route('/health', methods=['GET'])
 def health():
-    return jsonify({'status': 'healthy', 'version': '2.0.0', 'model': 'gemini-pro'})
+    return jsonify({'status': 'healthy', 'version': '1.5.0', 'model': 'gemini-pro'})
 
 @app.route('/api/enhance', methods=['POST'])
+@limiter.limit("10 per minute")
+@require_api_key
 def enhance():
     try:
-        data = request.json
-        if not data or 'prompt' not in data:
-            return jsonify({'error': 'Prompt is required'}), 400
+        data = request.get_json(force=True, silent=True)
+        if data is None:
+            return jsonify({'error': 'Invalid JSON or unsupported Content-Type payload'}), 400
+        if 'prompt' not in data:
+            return jsonify({'error': 'Prompt is missing from payload'}), 400
         
-        prompt = data['prompt'].strip()
-        if not prompt or len(prompt) > 5000:
-            return jsonify({'error': 'Invalid prompt length'}), 400
+        prompt = sanitize_input(data['prompt'])
+        if not prompt:
+            logger.warning(f"Prompt failed sanitization or was empty from {request.remote_addr}")
+            return jsonify({'error': 'Prompt is empty or invalid'}), 400
+        if len(prompt) > 100000:
+            return jsonify({'error': f'Invalid prompt length: {len(prompt)}'}), 400
         
         # Classify and score original
         classification = classify_prompt(prompt)
         original_score = score_prompt(prompt)
         
-        # Use multi-model fallback
+        # Use multi-model fallback (optionally prefer a specific model)
+        preferred_model = data.get('model')  # from frontend model selector
         full_prompt = f"{MASTER_PROMPT}\n\nUser prompt to enhance:\n{prompt}"
-        result = generate_with_fallback(full_prompt, max_tokens=2000)
+        result = generate_with_fallback(full_prompt, max_tokens=2000, preferred_model=preferred_model if preferred_model != 'auto' else None)
         enhanced = result['text']
         model_used = result['model']
         
         enhanced_score = score_prompt(enhanced)
         
+        logger.info(f"Enhanced prompt from {request.remote_addr} using {model_used}")
         return jsonify({
             'success': True,
             'original': prompt,
@@ -148,24 +197,31 @@ def enhance():
         })
     
     except Exception as e:
-        print(f"Error in enhance endpoint: {str(e)}")
-        import traceback
-        traceback.print_exc()
-        return jsonify({'error': str(e), 'success': False}), 500
+        logger.error(f"Error in enhance endpoint: {str(e)}")
+        # Do not expose raw tracebacks to the client
+        return jsonify({'error': 'An internal server error occurred processing your request.', 'success': False}), 500
 
 # ============================================================================
 # ADVANCED FEATURES (Used by Frontend)
 # ============================================================================
 
 @app.route('/api/detect-intent', methods=['POST'])
+@limiter.limit("20 per minute")
+@require_api_key
 def detect_prompt_intent():
     """Auto-detect prompt intent and suggest template"""
     try:
-        data = request.json
-        if not data or 'prompt' not in data:
-            return jsonify({'error': 'Prompt is required'}), 400
+        data = request.get_json(force=True, silent=True)
+        if data is None:
+            return jsonify({'error': 'Invalid JSON payload'}), 400
+        if 'prompt' not in data:
+            return jsonify({'error': 'Prompt is missing'}), 400
         
-        prompt = data['prompt'].strip()
+        prompt = sanitize_input(data['prompt'])
+        if not prompt:
+            logger.warning(f"Intent detection prompt empty or invalid from {request.remote_addr}")
+            return jsonify({'error': 'Prompt is empty or invalid'}), 400
+            
         intent_data = detect_intent(prompt)
         
         # Optionally apply template
@@ -173,42 +229,60 @@ def detect_prompt_intent():
             enhanced = apply_smart_template(prompt, intent_data)
             intent_data['enhanced_prompt'] = enhanced
         
+        logger.info(f"Intent detected for {request.remote_addr}")
         return jsonify({
             'success': True,
             'data': intent_data
         })
     
     except Exception as e:
+        logger.error(f"Error in intent endpoint: {str(e)}")
         return jsonify({'error': str(e)}), 500
 
 @app.route('/api/quality-heatmap', methods=['POST'])
+@limiter.limit("20 per minute")
+@require_api_key
 def quality_heatmap():
     """Get detailed quality heatmap analysis"""
     try:
-        data = request.json
-        if not data or 'prompt' not in data:
-            return jsonify({'error': 'Prompt is required'}), 400
+        data = request.get_json(force=True, silent=True)
+        if data is None:
+            return jsonify({'error': 'Invalid JSON payload'}), 400
+        if 'prompt' not in data:
+            return jsonify({'error': 'Prompt is missing'}), 400
         
-        prompt = data['prompt'].strip()
+        prompt = sanitize_input(data['prompt'])
+        if not prompt:
+            return jsonify({'error': 'Prompt is empty or invalid'}), 400
+            
         analysis = analyze_quality_heatmap(prompt)
         
+        logger.info(f"Quality heatmap generated for {request.remote_addr}")
         return jsonify({
             'success': True,
             'data': analysis
         })
     
     except Exception as e:
+        logger.error(f"Error in quality endpoint: {str(e)}")
         return jsonify({'error': str(e)}), 500
 
 @app.route('/api/ab-test', methods=['POST'])
+@limiter.limit("5 per minute")
+@require_api_key
 def ab_test():
     """Generate 3 A/B test variations"""
     try:
-        data = request.json
-        if not data or 'prompt' not in data:
-            return jsonify({'error': 'Prompt is required'}), 400
+        data = request.get_json(force=True, silent=True)
+        if data is None:
+            return jsonify({'error': 'Invalid JSON payload'}), 400
+        if 'prompt' not in data:
+            return jsonify({'error': 'Prompt is missing'}), 400
         
-        prompt = data['prompt'].strip()
+        prompt = sanitize_input(data['prompt'])
+        if not prompt:
+            return jsonify({'error': 'Prompt is empty or invalid'}), 400
+            
         variations = generate_ab_variations(prompt)
         
         # Optionally include comparison
@@ -219,12 +293,14 @@ def ab_test():
                 'data': comparison
             })
         
+        logger.info(f"A/B variations generated for {request.remote_addr}")
         return jsonify({
             'success': True,
             'data': {'variations': variations}
         })
     
     except Exception as e:
+        logger.error(f"Error in AB test endpoint: {str(e)}")
         return jsonify({'error': str(e)}), 500
 
 
@@ -237,4 +313,4 @@ def ab_test():
 app = app
 
 if __name__ == '__main__':
-    app.run(debug=True)
+    app.run(debug=False)

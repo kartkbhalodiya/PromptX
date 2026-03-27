@@ -372,12 +372,45 @@ Gemini → OpenAI → DeepSeek → HuggingFace
 | Feature | Status |
 |---------|--------|
 | 🔄 Multi-model fallback system | ✅ Complete |
+| 🧑‍💻 Animated CLI Boot Sequences (`start.sh` & `setup.sh`) | ✅ Complete |
+| 💾 Automatic Local Storage Prompt Tracking | ✅ Complete |
+| 🏗️ Mermaid.js Architecture & Detailed Constraint Engineering | ✅ Complete |
 | 📤 Export prompts to JSON/CSV | 🔜 Coming Soon |
 | 📚 Prompt templates library | 🔜 Coming Soon |
 | 🤖 Add Claude (Anthropic) support | 💡 Planned |
 | 👥 Team collaboration features | 💡 Planned |
 | 🔌 Chrome extension | 💡 Planned |
 | 📱 Mobile app | 💡 Planned |
+
+</div>
+
+<br>
+
+---
+
+## 🆕 Recent Major Updates (v1.0.0)
+
+**UI/UX Improvements:**
+- Pinned bottom chat-input interface with endless scrolling prompt body.
+- Replaced standard `<select>` menus with a custom Lucide-icon integrated model dropdown.
+- Removed legacy User-sidebar sections and improved overall chat-flow aesthetics.
+- Seamless automatic local prompt history caching via `localStorage`.
+- Exact HTTP error routing (e.g. `400 Bad Request` and `429 Too Many Requests`) directly visible in chat.
+
+**Backend Optimization (Flask/NVIDIA/Gemini):**
+- Upgraded `force=True` on Flask JSON deserialization to bypass strict browser-header rejection bugs.
+- Implemented sequential generation for multi-prompt A/B Testing to prevent HuggingFace/NVIDIA NIM free-tier API rate exhaustion.
+- Augmented AI prompt logic to enforce strict structuring, Mermaid.js system maps, and step-by-step documentation constraints in "Detailed" and "Structured" modes.
+- Vastly expanded token ingestion capacity from 5K to 100K characters.
+
+**CLI Developer Experience:**
+- Overhauled `start.sh` and `setup.sh` entirely into an interactive graphical boot sequence framework.
+- Injected custom, high-density ASCII "PromptX Bot" gradients leveraging intricate ANSI escapes and layout centering.
+- Integrated background task progress tracking natively via bash animated loading spinners.
+
+<br>
+
+---
 
 </div>
 
@@ -440,59 +473,9 @@ This project is licensed under the **MIT License** - see the [LICENSE](LICENSE) 
 
 <br>
 
+<br>
+
 **Made with 💜 by the PromptX Team**
-
-*Transform your prompts. Transform your results.*
-
-<br>
-
-</div>k
-- 🎨 **Lucide Icons** for beautiful icons
-- 💜 **Open Source** community for inspiration
-
----
-
-## 📞 Support & Contact
-
-<div align="center">
-
-<table>
-<tr>
-<td align="center">
-<a href="https://github.com/yourusername/Prompt.ai/issues">
-<img src="https://raw.githubusercontent.com/lucide-icons/lucide/main/icons/bug.svg" width="32" height="32"/>
-<br>
-<b>Report Bug</b>
-</a>
-</td>
-<td align="center">
-<a href="https://github.com/yourusername/Prompt.ai/discussions">
-<img src="https://raw.githubusercontent.com/lucide-icons/lucide/main/icons/message-circle.svg" width="32" height="32"/>
-<br>
-<b>Discussions</b>
-</a>
-</td>
-<td align="center">
-<a href="https://github.com/yourusername/Prompt.ai">
-<img src="https://raw.githubusercontent.com/lucide-icons/lucide/main/icons/git-pull-request.svg" width="32" height="32"/>
-<br>
-<b>Contribute</b>
-</a>
-</td>
-</tr>
-</table>
-
-<br>
-
----
-
-<br>
-
-### ⭐ Star this repo if you find it helpful!
-
-<br>
-
-**Made with 💜 by the PromptX**
 
 *Transform your prompts. Transform your results.*
 

@@ -17,8 +17,8 @@ def test_fallback():
     print("\n📋 Available API Keys:")
     keys = {
         'Gemini': os.getenv('GEMINI_API_KEY'),
-        'OpenAI': os.getenv('OPENAI_API_KEY'),
-        'DeepSeek': os.getenv('DEEPSEEK_API_KEY'),
+        'NVIDIA Mistral': os.getenv('NVIDIA_MISTRAL_API_KEY'),
+        'NVIDIA Qwen': os.getenv('NVIDIA_QWEN_API_KEY'),
         'HuggingFace': os.getenv('HUGGINGFACE_API_KEY')
     }
     

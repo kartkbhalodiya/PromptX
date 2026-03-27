@@ -8,6 +8,31 @@ from dotenv import load_dotenv
 
 load_dotenv()
 
+import concurrent.futures
+import copy
+from functools import wraps
+from collections import OrderedDict
+
+class DeepCopyLRUCache:
+    """An LRU Cache wrapper that returns deep copies of cached values to prevent mutation side-effects."""
+    def __init__(self, capacity=500):
+        self.cache = OrderedDict()
+        self.capacity = capacity
+
+    def __call__(self, func):
+        @wraps(func)
+        def wrapper(*args, **kwargs):
+            key = (args, frozenset(kwargs.items()))
+            if key in self.cache:
+                self.cache.move_to_end(key)
+                return copy.deepcopy(self.cache[key])
+            result = func(*args, **kwargs)
+            self.cache[key] = copy.deepcopy(result)
+            if len(self.cache) > self.capacity:
+                self.cache.popitem(last=False)
+            return result
+        return wrapper
+
 # ============================================================================
 # MULTI-MODEL FALLBACK SYSTEM
 # ============================================================================
@@ -18,16 +43,24 @@ class AIModelFallback:
     def __init__(self):
         self.models = [
             {'name': 'gemini', 'priority': 1},
-            {'name': 'openai', 'priority': 2},
-            {'name': 'deepseek', 'priority': 3},
+            {'name': 'nvidia_mistral', 'priority': 2},
+            {'name': 'nvidia_qwen', 'priority': 3},
             {'name': 'huggingface', 'priority': 4}
         ]
     
-    def generate(self, prompt, max_tokens=2000):
-        """Try models in order until one succeeds"""
+    def generate(self, prompt, max_tokens=2000, preferred_model=None):
+        """Try models in order until one succeeds.
+        If preferred_model is set, try it first before the fallback chain."""
         errors = []
         
-        for model in self.models:
+        # Build model order: preferred first (if specified), then remaining
+        if preferred_model:
+            model_order = [m for m in self.models if m['name'] == preferred_model]
+            model_order += [m for m in self.models if m['name'] != preferred_model]
+        else:
+            model_order = self.models
+        
+        for model in model_order:
             try:
                 result = self._call_model(model['name'], prompt, max_tokens)
                 if result:
@@ -42,10 +75,10 @@ class AIModelFallback:
         """Call specific model"""
         if model_name == 'gemini':
             return self._call_gemini(prompt)
-        elif model_name == 'openai':
-            return self._call_openai(prompt, max_tokens)
-        elif model_name == 'deepseek':
-            return self._call_deepseek(prompt, max_tokens)
+        elif model_name == 'nvidia_mistral':
+            return self._call_nvidia_mistral(prompt, max_tokens)
+        elif model_name == 'nvidia_qwen':
+            return self._call_nvidia_qwen(prompt, max_tokens)
         elif model_name == 'huggingface':
             return self._call_huggingface(prompt, max_tokens)
     
@@ -61,41 +94,69 @@ class AIModelFallback:
         )
         return response.text.strip()
     
-    def _call_openai(self, prompt, max_tokens):
-        api_key = os.getenv('OPENAI_API_KEY')
+    def _split_prompt(self, prompt):
+        """Helper to separate system and user prompts if combined."""
+        delimiter = "\n\nUser prompt to enhance:\n"
+        if delimiter in prompt:
+            parts = prompt.split(delimiter, 1)
+            return [
+                {'role': 'system', 'content': parts[0].strip()},
+                {'role': 'user', 'content': parts[1].strip()}
+            ]
+        # Same for conciseness logic if any other delimited form comes through
+        if ":\n" in prompt and ("Make this prompt concise" in prompt or "Rewrite this prompt" in prompt or "Expand this prompt" in prompt):
+            parts = prompt.split(":\n", 1)
+            return [
+                {'role': 'system', 'content': parts[0].strip()},
+                {'role': 'user', 'content': parts[1].strip()}
+            ]
+        return [{'role': 'user', 'content': prompt}]
+
+    def _call_nvidia_mistral(self, prompt, max_tokens):
+        api_key = os.getenv('NVIDIA_MISTRAL_API_KEY')
         if not api_key:
-            raise ValueError("OPENAI_API_KEY not found")
+            raise ValueError("NVIDIA_MISTRAL_API_KEY not found")
         
         response = requests.post(
-            'https://api.openai.com/v1/chat/completions',
+            'https://integrate.api.nvidia.com/v1/chat/completions',
             headers={'Authorization': f'Bearer {api_key}'},
             json={
-                'model': 'gpt-3.5-turbo',
-                'messages': [{'role': 'user', 'content': prompt}],
-                'max_tokens': max_tokens
+                'model': 'mistralai/mistral-small-4-119b-2603',
+                'messages': self._split_prompt(prompt),
+                'max_tokens': min(max_tokens, 16384),
+                'reasoning_effort': 'high',
+                'temperature': 0.10,
+                'top_p': 1.00
             },
-            timeout=30
+            timeout=60
         )
         response.raise_for_status()
-        return response.json()['choices'][0]['message']['content'].strip()
-    
-    def _call_deepseek(self, prompt, max_tokens):
-        api_key = os.getenv('DEEPSEEK_API_KEY')
+        msg = response.json().get('choices', [{}])[0].get('message', {})
+        content = msg.get('content') or msg.get('reasoning_content') or ""
+        return str(content).strip()
+
+    def _call_nvidia_qwen(self, prompt, max_tokens):
+        api_key = os.getenv('NVIDIA_QWEN_API_KEY')
         if not api_key:
-            raise ValueError("DEEPSEEK_API_KEY not found")
+            raise ValueError("NVIDIA_QWEN_API_KEY not found")
         
         response = requests.post(
-            'https://api.deepseek.com/v1/chat/completions',
+            'https://integrate.api.nvidia.com/v1/chat/completions',
             headers={'Authorization': f'Bearer {api_key}'},
             json={
-                'model': 'deepseek-chat',
-                'messages': [{'role': 'user', 'content': prompt}],
-                'max_tokens': max_tokens
+                'model': 'qwen/qwen3.5-122b-a10b',
+                'messages': self._split_prompt(prompt),
+                'max_tokens': min(max_tokens, 16384),
+                'temperature': 0.60,
+                'top_p': 0.95,
+                'chat_template_kwargs': {"enable_thinking": True}
             },
-            timeout=30
+            timeout=60
         )
         response.raise_for_status()
-        return response.json()['choices'][0]['message']['content'].strip()
+        msg = response.json().get('choices', [{}])[0].get('message', {})
+        content = msg.get('content') or msg.get('reasoning_content') or ""
+        return str(content).strip()
     
     def _call_huggingface(self, prompt, max_tokens):
         api_key = os.getenv('HUGGINGFACE_API_KEY')
@@ -103,16 +164,20 @@ class AIModelFallback:
             raise ValueError("HUGGINGFACE_API_KEY not found")
         
         response = requests.post(
-            'https://api-inference.huggingface.co/models/meta-llama/Llama-3.2-3B-Instruct',
+            'https://router.huggingface.co/v1/chat/completions',
             headers={'Authorization': f'Bearer {api_key}'},
-            json={'inputs': prompt, 'parameters': {'max_new_tokens': max_tokens, 'return_full_text': False}},
-            timeout=30
+            json={
+                'model': 'Qwen/Qwen2.5-72B-Instruct',
+                'messages': self._split_prompt(prompt),
+                'max_tokens': max_tokens,
+                'temperature': 0.7
+            },
+            timeout=60
         )
         response.raise_for_status()
-        result = response.json()
-        if isinstance(result, list) and len(result) > 0:
-            return result[0].get('generated_text', '').strip()
-        return result.get('generated_text', '').strip()
+        msg = response.json().get('choices', [{}])[0].get('message', {})
+        content = msg.get('content') or ""
+        return str(content).strip()
 
 # Global fallback instance
 _fallback = AIModelFallback()
@@ -124,14 +189,17 @@ def get_client():
         raise ValueError("GEMINI_API_KEY not found in environment")
     return genai.Client(api_key=api_key)
 
-def generate_with_fallback(prompt, max_tokens=2000):
-    """Generate text with automatic model fallback"""
-    return _fallback.generate(prompt, max_tokens)
+@DeepCopyLRUCache(capacity=500)
+def generate_with_fallback(prompt, max_tokens=2000, preferred_model=None):
+    """Generate text with automatic model fallback.
+    If preferred_model is set, try it first before the fallback chain."""
+    return _fallback.generate(prompt, max_tokens, preferred_model=preferred_model)
 
 # ============================================================================
 # INTENT DETECTION
 # ============================================================================
 
+@DeepCopyLRUCache(capacity=500)
 def detect_intent(prompt):
     """Detect prompt intent"""
     keywords = {
@@ -160,6 +228,7 @@ def apply_smart_template(prompt, intent_data):
 # QUALITY ANALYZER
 # ============================================================================
 
+@DeepCopyLRUCache(capacity=500)
 def analyze_quality_heatmap(prompt):
     """Analyze prompt quality"""
     length = len(prompt)
@@ -209,30 +278,47 @@ def analyze_quality_heatmap(prompt):
 # A/B TESTING
 # ============================================================================
 
+@DeepCopyLRUCache(capacity=500)
 def generate_ab_variations(prompt):
-    """Generate 3 variations with fallback"""
+    """Generate 3 variations with fallback concurrently to prevent Vercel Application Timeouts"""
+    
+    def fetch_variation(style_prompt, max_tokens):
+        result = generate_with_fallback(style_prompt, max_tokens)
+        return {'text': result['text'], 'length': len(result['text']), 'model': result['model']}
+
     try:
-        # Concise version
-        concise_prompt = f"Make this prompt concise and direct (max 100 words):\n{prompt}"
-        concise_result = generate_with_fallback(concise_prompt, 500)
-        concise = concise_result['text']
+        # Prepare prompts
+        c_prompt = f"Make this prompt concise and direct (max 150 words) focusing only on core deliverables:\n{prompt}"
         
-        # Detailed version
-        detailed_prompt = f"Expand this prompt with comprehensive details:\n{prompt}"
-        detailed_result = generate_with_fallback(detailed_prompt, 1000)
-        detailed = detailed_result['text']
-        
-        # Structured version
-        structured_prompt = f"Rewrite this prompt with clear structure and sections:\n{prompt}"
-        structured_result = generate_with_fallback(structured_prompt, 1000)
-        structured = structured_result['text']
+        d_prompt = f"""Expand this prompt into a comprehensive, highly-detailed technical specification.
+You MUST include:
+1. Deep technical requirements and functional constraints.
+2. A system architecture or data flow breakdown.
+3. How different components and integrations will work together.
+4. Edge cases, performance considerations, and scalability.
+Make it as detailed and exhaustive as possible:\n{prompt}"""
+
+        s_prompt = f"""Rewrite this prompt with an ultra-professional, highly organized structure.
+It MUST include:
+1. Clear headers and bullet points.
+2. An architectural system diagram using Mermaid.js syntax (e.g. ```mermaid ...```).
+3. Step-by-step integration and workflow details.
+4. Specific technology stack recommendations.
+Make it visually appealing and highly technical:\n{prompt}"""
+
+        # Fetch variations sequentially to avoid free-tier concurrency limits
+        concise = fetch_variation(c_prompt, 800)
+        detailed = fetch_variation(d_prompt, 2048)
+        structured = fetch_variation(s_prompt, 2048)
         
         return {
-            'concise': {'text': concise, 'length': len(concise), 'model': concise_result['model']},
-            'detailed': {'text': detailed, 'length': len(detailed), 'model': detailed_result['model']},
-            'structured': {'text': structured, 'length': len(structured), 'model': structured_result['model']}
+            'concise': concise,
+            'detailed': detailed,
+            'structured': structured
         }
+            
     except Exception as e:
+        print(f"Parallel variation failed: {e}")
         return {
             'concise': {'text': prompt, 'length': len(prompt), 'model': 'fallback'},
             'detailed': {'text': prompt, 'length': len(prompt), 'model': 'fallback'},
@@ -256,25 +342,3 @@ def compare_variations(original, variations):
             'reason': f'{best.capitalize()} version has the highest quality score'
         }
     }
-
-# ============================================================================
-# VERSION CONTROL (Stub - not used by frontend)
-# ============================================================================
-
-def save_version(prompt_id, prompt_text, metadata):
-    return {'version': 1, 'saved': True}
-
-def get_versions(prompt_id):
-    return []
-
-def get_version_diff(prompt_id, v1, v2):
-    return {'diff': 'No changes'}
-
-def rollback_version(prompt_id, version):
-    return {'rolled_back': True}
-
-def get_version_history_summary(prompt_id):
-    return {'total_versions': 0}
-
-def compare_all_versions(prompt_id):
-    return {'versions': []}
