@@ -92,42 +92,20 @@ function updateModeDisplay() {
 
 // ===== MODEL SELECTOR =====
 function setupModelSelector() {
-  const customSelect = document.getElementById('custom-model-select');
-  if (!customSelect) return;
-  const selected = customSelect.querySelector('.select-selected');
-  const itemsContainer = customSelect.querySelector('.select-items');
-  const items = itemsContainer.querySelectorAll('div');
-
-  selected.addEventListener('click', (e) => {
-    e.stopPropagation();
-    itemsContainer.classList.toggle('select-hide');
-    selected.classList.toggle('open');
-  });
-
-  items.forEach(item => {
-    item.addEventListener('click', (e) => {
-      e.stopPropagation();
-      selectedModel = item.getAttribute('data-value');
-      const iconClass = item.getAttribute('data-icon');
-      const text = item.querySelector('span').textContent;
+  const modelBtns = document.querySelectorAll('.model-option');
+  const badge = document.getElementById('topbar-model-badge');
+  
+  modelBtns.forEach(btn => {
+    btn.addEventListener('click', () => {
+      modelBtns.forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+      selectedModel = btn.getAttribute('data-model');
       
-      selected.innerHTML = `<i data-lucide="${iconClass}"></i> <span>${text}</span> <i data-lucide="chevron-down" class="chevron"></i>`;
-      try { if (typeof lucide !== 'undefined') lucide.createIcons(); } catch(err){}
+      // Update topbar badge
+      if (badge) badge.textContent = selectedModel.toUpperCase().replace('_', ' ');
       
-      items.forEach(i => i.classList.remove('same-as-selected'));
-      item.classList.add('same-as-selected');
-      itemsContainer.classList.add('select-hide');
-      selected.classList.remove('open');
-      
-      // Update sidebar model info
-      document.getElementById('sidebar-model-info').textContent = `MODEL: ${text.toUpperCase()}`;
-      showToast('[SYS] Model Changed', `Switched to ${text}`, 'success');
+      showToast('[SYS] Model Changed', `Switched to ${btn.textContent.trim()}`, 'success');
     });
-  });
-
-  document.addEventListener('click', () => {
-    itemsContainer.classList.add('select-hide');
-    selected.classList.remove('open');
   });
 }
 
