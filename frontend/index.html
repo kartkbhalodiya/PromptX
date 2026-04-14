@@ -3,136 +3,561 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>PromptX - Transform Your Prompts</title>
+  <title>PromptX — Transform, Enhance & Analyze Prompts with AI</title>
+  <meta name="description" content="The API to transform, enhance, and analyze your AI prompts at scale. Power your AI workflows with perfectly crafted prompts. PromptX delivers premium prompt engineering to AI builders.">
+  <meta name="theme-color" content="#00ff41">
   <link rel="icon" type="image/svg+xml" href="Public/star.svg">
   <link rel="icon" type="image/png" sizes="32x32" href="favicon_io/favicon-32x32.png">
   <link rel="icon" type="image/png" sizes="16x16" href="favicon_io/favicon-16x16.png">
   <link rel="apple-touch-icon" sizes="180x180" href="favicon_io/apple-touch-icon.png">
   <link rel="manifest" href="favicon_io/site.webmanifest">
   <link rel="stylesheet" href="index.css">
-  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=Orbitron:wght@700;800;900&display=swap">
-  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/lucide-icons@latest/dist/umd/lucide.min.css">
 </head>
 <body>
-  <div class="gradient-bg"></div>
-  
-  <!-- Sidebar -->
-  <aside class="sidebar" id="sidebar">
-    <div class="sidebar-header">
-      <img src="Public/bot-img.png" alt="PromptX" class="sidebar-logo">
-      <h2>PROMPTX</h2>
-      <button class="sidebar-close" id="sidebar-close">
-        <i data-lucide="x"></i>
-      </button>
-    </div>
+
+  <!-- Background Effects -->
+  <div class="cyber-bg"></div>
+  <div class="scanlines"></div>
+  <div class="particles">
+    <div class="particle"></div>
+    <div class="particle"></div>
+    <div class="particle"></div>
+    <div class="particle"></div>
+    <div class="particle"></div>
+    <div class="particle"></div>
+    <div class="particle"></div>
+    <div class="particle"></div>
+  </div>
+
+  <!-- Navigation -->
+  <nav class="navbar" id="navbar">
+    <a href="#" class="nav-brand">
+      <img src="Public/bot-img.png" alt="PromptX">
+      <span class="nav-brand-text">PROMPTX</span>
+    </a>
     
-    <button class="new-chat-btn" id="new-chat-btn">
-      <i data-lucide="plus"></i>
-      New Chat
+    <ul class="nav-links" id="nav-links">
+      <li><a href="#features">Features</a></li>
+      <li><a href="#demo" class="active">Playground</a></li>
+      <li><a href="#integrations">Integrations</a></li>
+      <li><a href="#use-cases">Use Cases</a></li>
+    </ul>
+    
+    <div class="nav-actions">
+      <a href="https://github.com/Santosh-Prasad-Verma/PromptX" target="_blank" class="nav-github">
+        <svg viewBox="0 0 16 16"><path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.013 8.013 0 0016 8c0-4.42-3.58-8-8-8z"/></svg>
+        <span>Star</span>
+      </a>
+      <a href="#demo" class="btn-primary" id="try-now-btn">
+        Try Now →
+      </a>
+    </div>
+
+    <button class="nav-mobile-toggle" id="nav-mobile-toggle" aria-label="Menu">
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <line x1="3" y1="6" x2="21" y2="6"/>
+        <line x1="3" y1="12" x2="21" y2="12"/>
+        <line x1="3" y1="18" x2="21" y2="18"/>
+      </svg>
     </button>
-    
-    <nav class="sidebar-nav">
-      <button class="nav-item active" data-mode="enhance">
-        <i data-lucide="sparkles"></i>
-        <span>Enhance</span>
-      </button>
-      <button class="nav-item" data-mode="analyze">
-        <i data-lucide="activity"></i>
-        <span>Analyze</span>
-      </button>
-      <button class="nav-item" data-mode="compare">
-        <i data-lucide="git-compare"></i>
-        <span>Compare</span>
-      </button>
-      <button class="nav-item" data-mode="history">
-        <i data-lucide="clock"></i>
-        <span>History</span>
-      </button>
-    </nav>
-    
-    <div class="sidebar-settings" style="margin-top: auto; padding: 1.5rem 1rem 1rem 1rem; border-top: 1px solid var(--border);">
-      <label style="font-size: 0.8rem; color: var(--text-secondary); margin-bottom: 0.5rem; display: block;"><i data-lucide="key" style="width: 12px; height: 12px; display: inline; margin-bottom: -2px;"></i> API Key</label>
-      <input type="password" id="api-key-input" placeholder="Required if set on server" style="width: 100%; padding: 0.75rem; background: rgba(0,0,0,0.3); border: 1px solid var(--border); border-radius: 8px; color: var(--text-primary); font-size: 0.85rem;" />
-    </div>
-  </aside>
-  
-  <!-- Main Chat Area -->
-  <main class="chat-container">
-    <div class="chat-header">
-      <button class="sidebar-toggle" id="sidebar-toggle">
-        <i data-lucide="menu"></i>
-      </button>
-      <div class="chat-title">PromptX AI</div>
-    </div>
+  </nav>
 
-    <!-- Chat Messages -->
-    <div class="chat-messages" id="chat-messages">
-      <div class="welcome-screen" id="welcome-screen">
-        <img src="Public/bot-img.png" alt="PromptX" class="welcome-logo">
-        <h1>PROMPTX</h1>
-        <p>Transform your prompts with AI</p>
-        
-        <div class="quick-actions">
-          <button class="quick-action" data-action="enhance">
-            <i data-lucide="sparkles"></i>
-            <div>
-              <strong>Enhance Prompt</strong>
-              <span>Make it professional</span>
-            </div>
-          </button>
-          <button class="quick-action" data-action="analyze">
-            <i data-lucide="activity"></i>
-            <div>
-              <strong>Analyze Quality</strong>
-              <span>Get detailed scores</span>
-            </div>
-          </button>
-          <button class="quick-action" data-action="compare">
-            <i data-lucide="git-compare"></i>
-            <div>
-              <strong>Compare Variations</strong>
-              <span>A/B test prompts</span>
-            </div>
-          </button>
+  <!-- Hero Section -->
+  <section class="hero" id="hero">
+    <div class="hero-badge" onclick="document.getElementById('demo').scrollIntoView({behavior:'smooth'})">
+      <div class="badge-dot"></div>
+      <span>New</span> — Multi-model prompt enhancement is live
+    </div>
+    
+    <h1>
+      The tool to enhance, analyze, and
+      <span class="text-gradient">transform prompts at scale.</span>
+    </h1>
+    
+    <p class="hero-subtitle">
+      Power your AI workflows with perfectly engineered prompts. 
+      PromptX delivers premium prompt enhancement to AI builders and teams.
+      <a href="https://github.com/Santosh-Prasad-Verma/PromptX" target="_blank">It's also open source.</a>
+    </p>
+    
+    <div class="hero-actions">
+      <a href="#demo" class="btn-primary">Get Started Free →</a>
+      <a href="https://github.com/Santosh-Prasad-Verma/PromptX" target="_blank" class="btn-secondary">
+        <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor"><path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.013 8.013 0 0016 8c0-4.42-3.58-8-8-8z"/></svg>
+        View on GitHub
+      </a>
+    </div>
+    
+    <!-- Code Preview -->
+    <div class="code-preview">
+      <div class="code-window">
+        <div class="code-window-header">
+          <div class="code-window-dots">
+            <span></span><span></span><span></span>
+          </div>
+          <span class="code-window-title">promptx_demo.py</span>
+          <div class="code-window-actions">
+            <button class="code-copy-btn" onclick="copyCodeSnippet()">Copy</button>
+          </div>
+        </div>
+        <div class="code-body">
+<pre><span class="line-number">1</span>  <span class="comment"># pip install promptx-py</span>
+<span class="line-number">2</span>  <span class="keyword">from</span> <span class="variable">promptx</span> <span class="keyword">import</span> <span class="function">PromptX</span>
+<span class="line-number">3</span>
+<span class="line-number">4</span>  <span class="variable">app</span> <span class="operator">=</span> <span class="function">PromptX</span>(<span class="property">api_key</span><span class="operator">=</span><span class="string">"px-YOUR_API_KEY"</span>)
+<span class="line-number">5</span>
+<span class="line-number">6</span>  <span class="comment"># Enhance a prompt:</span>
+<span class="line-number">7</span>  <span class="variable">result</span> <span class="operator">=</span> <span class="variable">app</span>.<span class="function">enhance</span>(<span class="string">'Write a blog post about AI'</span>)
+<span class="line-number">8</span>
+<span class="line-number">9</span>  <span class="comment"># Analyze prompt quality:</span>
+<span class="line-number">10</span> <span class="variable">score</span> <span class="operator">=</span> <span class="variable">app</span>.<span class="function">analyze</span>(<span class="variable">result</span>.<span class="property">enhanced</span>)
+<span class="line-number">11</span> <span class="keyword">print</span>(<span class="variable">score</span>.<span class="property">overall</span>)  <span class="comment"># → 9.2/10</span></pre>
+        </div>
+        <div class="code-output">
+<pre>✓ Enhanced prompt quality: <span style="color: var(--primary); font-weight: 700;">9.2/10</span>
+✓ Improvement: <span style="color: var(--primary); font-weight: 700;">+42 quality points</span>
+✓ Model used: <span style="color: var(--accent);">Gemini 2.0</span></pre>
         </div>
       </div>
     </div>
+  </section>
 
-    <!-- Input Area -->
-    <div class="chat-input-container">
-      <div class="chat-input-wrapper">
-        <div class="custom-model-select" id="custom-model-select">
-          <div class="select-selected">
-            <i data-lucide="bot"></i> <span>Auto (Fallback)</span>
-            <i data-lucide="chevron-down" class="chevron"></i>
-          </div>
-          <div class="select-items select-hide">
-            <div data-value="auto" data-icon="bot" class="same-as-selected"><i data-lucide="bot"></i> <span>Auto (Fallback)</span></div>
-            <div data-value="gemini" data-icon="sparkles"><i data-lucide="sparkles"></i> <span>Gemini 2.0</span></div>
-            <div data-value="nvidia_mistral" data-icon="brain"><i data-lucide="brain"></i> <span>NVIDIA Mistral</span></div>
-            <div data-value="nvidia_qwen" data-icon="hexagon"><i data-lucide="hexagon"></i> <span>NVIDIA Qwen</span></div>
-            <div data-value="huggingface" data-icon="smile"><i data-lucide="smile"></i> <span>HuggingFace</span></div>
-          </div>
-        </div>
-        <textarea 
-          id="chat-input" 
-          placeholder="Message PromptX..."
-          rows="1"
-        ></textarea>
-        <button class="send-btn" id="send-btn" disabled>
-          <i data-lucide="arrow-up"></i>
-        </button>
+  <!-- Stats -->
+  <section class="section stats-section" id="stats">
+    <div class="stats-grid fade-in">
+      <div class="stat-item">
+        <div class="stat-value">50K+</div>
+        <div class="stat-label">Prompts Enhanced</div>
       </div>
-      <div class="input-footer">
-        <span class="mode-indicator" id="mode-indicator">Enhance Mode</span>
+      <div class="stat-item">
+        <div class="stat-value">4.8x</div>
+        <div class="stat-label">Quality Improvement</div>
+      </div>
+      <div class="stat-item">
+        <div class="stat-value">5</div>
+        <div class="stat-label">AI Models</div>
+      </div>
+      <div class="stat-item">
+        <div class="stat-value">99.9%</div>
+        <div class="stat-label">Uptime</div>
       </div>
     </div>
-  </main>
+  </section>
 
+  <!-- Features -->
+  <section class="section" id="features">
+    <div class="section-header fade-in">
+      <div class="section-divider"></div>
+      <h2>Fast, reliable, and easy to integrate. <span class="text-gradient">And it's open source</span></h2>
+      <p>Everything you need to craft perfect prompts for any AI model, from simple enhancements to deep quality analysis.</p>
+    </div>
+    
+    <div class="features-grid">
+      <div class="feature-card fade-in">
+        <div class="feature-icon">✨</div>
+        <h3>Prompt Enhancement</h3>
+        <p>Transform vague instructions into precise, high-quality prompts with AI-powered rewriting. Supports multiple enhancement styles.</p>
+      </div>
+      <div class="feature-card fade-in">
+        <div class="feature-icon">📊</div>
+        <h3>Quality Analysis</h3>
+        <p>Get detailed quality scores across multiple dimensions — clarity, specificity, context, structure, and more. Actionable feedback included.</p>
+      </div>
+      <div class="feature-card fade-in">
+        <div class="feature-icon">🧪</div>
+        <h3>A/B Testing</h3>
+        <p>Generate multiple prompt variations and compare them side-by-side. Find the best version with quantitative quality metrics.</p>
+      </div>
+      <div class="feature-card fade-in">
+        <div class="feature-icon">🤖</div>
+        <h3>Multi-Model Support</h3>
+        <p>Choose from Gemini, NVIDIA Mistral, NVIDIA Qwen, HuggingFace, and auto-fallback. Best model, every time.</p>
+      </div>
+      <div class="feature-card fade-in">
+        <div class="feature-icon">⚡</div>
+        <h3>Blazing Fast API</h3>
+        <p>RESTful API with sub-second response times. Integrate into your workflow with a single API call. SDKs for Python and JavaScript.</p>
+      </div>
+      <div class="feature-card fade-in">
+        <div class="feature-icon">🔒</div>
+        <h3>Enterprise Ready</h3>
+        <p>API key authentication, rate limiting, history tracking, and export capabilities. Built for production workloads.</p>
+      </div>
+    </div>
+  </section>
 
+  <!-- Demo / Playground Section -->
+  <section class="section demo-section" id="demo">
+    <div class="section-header fade-in">
+      <div class="section-divider"></div>
+      <h2>Start enhancing <span class="text-gradient">today</span></h2>
+      <p>Try PromptX right now. Enter a prompt and watch it transform into something extraordinary.</p>
+    </div>
+    
+    <div class="app-section fade-in">
+      <div class="app-window">
+        <div class="app-header">
+          <div class="app-header-left">
+            <img src="Public/bot-img.png" alt="PromptX">
+            <span>PROMPTX</span>
+          </div>
+          <div class="app-mode-tabs" id="app-mode-tabs">
+            <button class="app-mode-tab active" data-mode="enhance">✨ Enhance</button>
+            <button class="app-mode-tab" data-mode="analyze">📊 Analyze</button>
+            <button class="app-mode-tab" data-mode="compare">🧪 Compare</button>
+          </div>
+        </div>
 
+        <!-- Chat Messages -->
+        <div class="chat-messages" id="chat-messages">
+          <div class="welcome-screen" id="welcome-screen">
+            <img src="Public/bot-img.png" alt="PromptX" class="welcome-logo">
+            <h1>PROMPTX</h1>
+            <p>Transform your prompts with AI</p>
+            
+            <div class="quick-actions">
+              <button class="quick-action" data-action="enhance">
+                <i data-lucide="sparkles"></i>
+                <div>
+                  <strong>Enhance Prompt</strong>
+                  <span>Make it professional</span>
+                </div>
+              </button>
+              <button class="quick-action" data-action="analyze">
+                <i data-lucide="activity"></i>
+                <div>
+                  <strong>Analyze Quality</strong>
+                  <span>Get detailed scores</span>
+                </div>
+              </button>
+              <button class="quick-action" data-action="compare">
+                <i data-lucide="git-compare"></i>
+                <div>
+                  <strong>Compare Variations</strong>
+                  <span>A/B test prompts</span>
+                </div>
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <!-- API Key -->
+        <div class="api-key-bar">
+          <label>🔑 API Key</label>
+          <input type="password" id="api-key-input" placeholder="Optional – required if set on server">
+        </div>
+
+        <!-- Input Area -->
+        <div class="chat-input-area">
+          <div class="chat-input-wrapper">
+            <div class="custom-model-select" id="custom-model-select">
+              <div class="select-selected">
+                <i data-lucide="bot"></i> <span>Auto (Fallback)</span>
+                <i data-lucide="chevron-down" class="chevron"></i>
+              </div>
+              <div class="select-items select-hide">
+                <div data-value="auto" data-icon="bot" class="same-as-selected"><i data-lucide="bot"></i> <span>Auto (Fallback)</span></div>
+                <div data-value="gemini" data-icon="sparkles"><i data-lucide="sparkles"></i> <span>Gemini 2.0</span></div>
+                <div data-value="nvidia_mistral" data-icon="brain"><i data-lucide="brain"></i> <span>NVIDIA Mistral</span></div>
+                <div data-value="nvidia_qwen" data-icon="hexagon"><i data-lucide="hexagon"></i> <span>NVIDIA Qwen</span></div>
+                <div data-value="huggingface" data-icon="smile"><i data-lucide="smile"></i> <span>HuggingFace</span></div>
+              </div>
+            </div>
+            <textarea 
+              id="chat-input" 
+              placeholder="Enter a prompt to enhance..."
+              rows="1"
+            ></textarea>
+            <button class="send-btn" id="send-btn" disabled>
+              <i data-lucide="arrow-up"></i>
+            </button>
+          </div>
+          <div class="input-footer">
+            <span class="mode-indicator" id="mode-indicator">Enhance Mode</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Integrations -->
+  <section class="section integrations-section" id="integrations">
+    <div class="section-header fade-in">
+      <div class="section-divider"></div>
+      <h2>Easily connect with <span class="text-gradient">your AI agents</span></h2>
+      <p>Integrate PromptX into any workflow with our REST API, Python SDK, or direct browser playground.</p>
+    </div>
+    
+    <div class="integration-cards fade-in">
+      <div class="integration-card">
+        <h3>🐍 Python SDK</h3>
+        <p>Install with pip and start enhancing prompts in three lines of code. Full type hints and async support.</p>
+        <div class="code-window" style="margin-top: 0.5rem;">
+          <div class="code-body" style="padding: 1rem;">
+<pre style="font-size: 0.8rem;"><span class="comment"># pip install promptx-py</span>
+<span class="keyword">from</span> <span class="variable">promptx</span> <span class="keyword">import</span> <span class="function">PromptX</span>
+<span class="variable">app</span> <span class="operator">=</span> <span class="function">PromptX</span>(<span class="property">api_key</span><span class="operator">=</span><span class="string">"..."</span>)
+<span class="variable">result</span> <span class="operator">=</span> <span class="variable">app</span>.<span class="function">enhance</span>(<span class="string">"your prompt"</span>)</pre>
+          </div>
+        </div>
+        <span class="card-arrow">→</span>
+      </div>
+      
+      <div class="integration-card">
+        <h3>🌐 REST API</h3>
+        <p>Simple HTTP endpoints for enhance, analyze, and A/B testing. Works with any language or framework.</p>
+        <div class="code-window" style="margin-top: 0.5rem;">
+          <div class="code-body" style="padding: 1rem;">
+<pre style="font-size: 0.8rem;"><span class="variable">curl</span> <span class="operator">-X</span> POST /api/enhance \
+  <span class="operator">-H</span> <span class="string">"Content-Type: application/json"</span> \
+  <span class="operator">-d</span> <span class="string">'{"prompt": "your text"}'</span></pre>
+          </div>
+        </div>
+        <span class="card-arrow">→</span>
+      </div>
+      
+      <div class="integration-card">
+        <h3>🎮 Browser Playground</h3>
+        <p>No setup required. Use the interactive playground above to test all features instantly in your browser.</p>
+        <div style="margin-top: 0.5rem; padding: 1rem; background: var(--primary-light); border: 1px solid var(--border); border-radius: 10px; text-align: center;">
+          <a href="#demo" class="btn-primary" style="font-size: 0.85rem; padding: 0.5rem 1.25rem;">Open Playground ↑</a>
+        </div>
+        <span class="card-arrow">→</span>
+      </div>
+    </div>
+  </section>
+
+  <!-- Testimonials -->
+  <section class="section testimonials-section" id="testimonials">
+    <div class="section-header fade-in">
+      <div class="section-divider"></div>
+      <h2>People love building with <span class="text-gradient">PromptX</span></h2>
+    </div>
+    
+    <div class="testimonials-track">
+      <div class="testimonials-scroll" id="testimonials-scroll">
+        <!-- First set -->
+        <div class="testimonial-card">
+          <div class="testimonial-header">
+            <div class="testimonial-avatar">A</div>
+            <div class="testimonial-info">
+              <h4>Alex R.</h4>
+              <span>@alexdev</span>
+            </div>
+          </div>
+          <p>"PromptX turned my vague prompts into absolutely precise instructions. My ChatGPT outputs improved by 10x overnight. 🔥"</p>
+        </div>
+        <div class="testimonial-card">
+          <div class="testimonial-header">
+            <div class="testimonial-avatar">S</div>
+            <div class="testimonial-info">
+              <h4>Sarah K.</h4>
+              <span>@sarahbuilds</span>
+            </div>
+          </div>
+          <p>"The quality analysis feature is amazing. I finally understand *why* my prompts weren't working. Game changer for our team."</p>
+        </div>
+        <div class="testimonial-card">
+          <div class="testimonial-header">
+            <div class="testimonial-avatar">M</div>
+            <div class="testimonial-info">
+              <h4>Marcus T.</h4>
+              <span>@marcusai</span>
+            </div>
+          </div>
+          <p>"Integrated the API into our pipeline in under 10 minutes. The multi-model fallback system is exactly what we needed."</p>
+        </div>
+        <div class="testimonial-card">
+          <div class="testimonial-header">
+            <div class="testimonial-avatar">P</div>
+            <div class="testimonial-info">
+              <h4>Priya N.</h4>
+              <span>@priyanext</span>
+            </div>
+          </div>
+          <p>"A/B testing prompts was always painful. PromptX makes it effortless — one click and I see three variations with quality scores."</p>
+        </div>
+        <div class="testimonial-card">
+          <div class="testimonial-header">
+            <div class="testimonial-avatar">J</div>
+            <div class="testimonial-info">
+              <h4>James L.</h4>
+              <span>@jamesml</span>
+            </div>
+          </div>
+          <p>"Open source AND this good? PromptX is the real deal. Starred on GitHub immediately. The cyberpunk UI is 🔥"</p>
+        </div>
+        <div class="testimonial-card">
+          <div class="testimonial-header">
+            <div class="testimonial-avatar">R</div>
+            <div class="testimonial-info">
+              <h4>Rachel W.</h4>
+              <span>@rachelwrites</span>
+            </div>
+          </div>
+          <p>"As a content creator, PromptX saves me hours every week. The enhanced prompts give me much better outputs from AI tools."</p>
+        </div>
+        <!-- Duplicate for infinite scroll -->
+        <div class="testimonial-card">
+          <div class="testimonial-header">
+            <div class="testimonial-avatar">A</div>
+            <div class="testimonial-info">
+              <h4>Alex R.</h4>
+              <span>@alexdev</span>
+            </div>
+          </div>
+          <p>"PromptX turned my vague prompts into absolutely precise instructions. My ChatGPT outputs improved by 10x overnight. 🔥"</p>
+        </div>
+        <div class="testimonial-card">
+          <div class="testimonial-header">
+            <div class="testimonial-avatar">S</div>
+            <div class="testimonial-info">
+              <h4>Sarah K.</h4>
+              <span>@sarahbuilds</span>
+            </div>
+          </div>
+          <p>"The quality analysis feature is amazing. I finally understand *why* my prompts weren't working. Game changer for our team."</p>
+        </div>
+        <div class="testimonial-card">
+          <div class="testimonial-header">
+            <div class="testimonial-avatar">M</div>
+            <div class="testimonial-info">
+              <h4>Marcus T.</h4>
+              <span>@marcusai</span>
+            </div>
+          </div>
+          <p>"Integrated the API into our pipeline in under 10 minutes. The multi-model fallback system is exactly what we needed."</p>
+        </div>
+        <div class="testimonial-card">
+          <div class="testimonial-header">
+            <div class="testimonial-avatar">P</div>
+            <div class="testimonial-info">
+              <h4>Priya N.</h4>
+              <span>@priyanext</span>
+            </div>
+          </div>
+          <p>"A/B testing prompts was always painful. PromptX makes it effortless — one click and I see three variations with quality scores."</p>
+        </div>
+        <div class="testimonial-card">
+          <div class="testimonial-header">
+            <div class="testimonial-avatar">J</div>
+            <div class="testimonial-info">
+              <h4>James L.</h4>
+              <span>@jamesml</span>
+            </div>
+          </div>
+          <p>"Open source AND this good? PromptX is the real deal. Starred on GitHub immediately. The cyberpunk UI is 🔥"</p>
+        </div>
+        <div class="testimonial-card">
+          <div class="testimonial-header">
+            <div class="testimonial-avatar">R</div>
+            <div class="testimonial-info">
+              <h4>Rachel W.</h4>
+              <span>@rachelwrites</span>
+            </div>
+          </div>
+          <p>"As a content creator, PromptX saves me hours every week. The enhanced prompts give me much better outputs from AI tools."</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Use Cases -->
+  <section class="section" id="use-cases">
+    <div class="section-header fade-in">
+      <div class="section-divider"></div>
+      <h2>Transform prompts into <span class="text-gradient">AI-powered solutions</span></h2>
+      <p>PromptX powers AI workflows across every industry and use case.</p>
+    </div>
+    
+    <div class="use-cases-grid fade-in">
+      <div class="use-case-card" onclick="document.getElementById('demo').scrollIntoView({behavior:'smooth'})">
+        <span class="use-case-emoji">💬</span>
+        <h3>AI Chatbots</h3>
+        <p>Craft perfect system prompts for customer-facing chatbots with consistent quality.</p>
+      </div>
+      <div class="use-case-card" onclick="document.getElementById('demo').scrollIntoView({behavior:'smooth'})">
+        <span class="use-case-emoji">📝</span>
+        <h3>Content Creation</h3>
+        <p>Generate precise writing prompts for blog posts, emails, social media, and marketing copy.</p>
+      </div>
+      <div class="use-case-card" onclick="document.getElementById('demo').scrollIntoView({behavior:'smooth'})">
+        <span class="use-case-emoji">💻</span>
+        <h3>Code Generation</h3>
+        <p>Engineer prompts that produce clean, working code from AI coding assistants on the first try.</p>
+      </div>
+      <div class="use-case-card" onclick="document.getElementById('demo').scrollIntoView({behavior:'smooth'})">
+        <span class="use-case-emoji">🔬</span>
+        <h3>Research & Analysis</h3>
+        <p>Build deep research prompts that extract structured insights from complex datasets.</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- CTA -->
+  <section class="cta-section" id="cta">
+    <div class="section-divider" style="margin-bottom: 3rem;"></div>
+    <h2>Ready to <span class="text-gradient">supercharge</span> your prompts?</h2>
+    <p>Start for free. No credit card required. Open source forever.</p>
+    <div class="cta-actions">
+      <a href="#demo" class="btn-primary" style="padding: 1rem 2.5rem; font-size: 1.05rem;">Get Started Free →</a>
+      <a href="https://github.com/Santosh-Prasad-Verma/PromptX" target="_blank" class="btn-secondary" style="padding: 1rem 2rem; font-size: 1.05rem;">
+        View Source Code
+      </a>
+    </div>
+  </section>
+
+  <!-- Footer -->
+  <footer class="footer">
+    <div class="footer-grid">
+      <div class="footer-brand">
+        <div class="nav-brand" style="display: flex; align-items: center; gap: 0.75rem;">
+          <img src="Public/bot-img.png" alt="PromptX" style="width: 32px; height: 32px; filter: drop-shadow(0 0 8px rgba(0, 255, 65, 0.4));">
+          <span class="nav-brand-text">PROMPTX</span>
+        </div>
+        <p>The open-source prompt engineering platform. Enhance, analyze, and A/B test your AI prompts at scale.</p>
+        <div class="footer-socials">
+          <a href="https://github.com/Santosh-Prasad-Verma/PromptX" target="_blank" title="GitHub">GH</a>
+          <a href="#" title="Discord">DC</a>
+          <a href="#" title="Twitter">X</a>
+        </div>
+      </div>
+      
+      <div class="footer-column">
+        <h4>Product</h4>
+        <a href="#demo">Playground</a>
+        <a href="#features">Features</a>
+        <a href="#integrations">API Docs</a>
+        <a href="#stats">Benchmarks</a>
+      </div>
+      
+      <div class="footer-column">
+        <h4>Resources</h4>
+        <a href="https://github.com/Santosh-Prasad-Verma/PromptX" target="_blank">GitHub</a>
+        <a href="#use-cases">Use Cases</a>
+        <a href="#integrations">Integrations</a>
+        <a href="#">Changelog</a>
+      </div>
+      
+      <div class="footer-column">
+        <h4>Company</h4>
+        <a href="#">About</a>
+        <a href="#">Blog</a>
+        <a href="#">Careers</a>
+        <a href="#">Contact</a>
+      </div>
+    </div>
+    
+    <div class="footer-bottom">
+      <span>© 2026 PromptX. All rights reserved.</span>
+      <span>Built with ❤️ and ☕ by <a href="https://github.com/Santosh-Prasad-Verma" target="_blank" style="color: var(--primary); text-decoration: none;">Santosh Prasad Verma</a></span>
+    </div>
+  </footer>
+
+  <!-- Toast -->
   <div id="toast-container" class="toast-container"></div>
 
+  <!-- Scripts -->
   <script src="https://cdn.jsdelivr.net/npm/lucide@latest/dist/umd/lucide.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/dompurify/3.0.6/purify.min.js"></script>

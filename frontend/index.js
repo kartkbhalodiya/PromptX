@@ -11,56 +11,104 @@ document.addEventListener('DOMContentLoaded', () => {
   } catch (e) {
     console.error('Failed to initialize icons:', e);
   }
+  
+  setupNavbar();
+  setupModeTabs();
   setupQuickActions();
   setupModelSelector();
-  setupSidebarToggle();
+  setupChatInput();
+  setupScrollAnimations();
+  setupMobileNav();
   
   const apiInput = document.getElementById('api-key-input');
   if (apiInput) {
-      apiInput.value = localStorage.getItem('promptx_api_key') || '';
-      apiInput.addEventListener('input', (e) => localStorage.setItem('promptx_api_key', e.target.value));
+    apiInput.value = localStorage.getItem('promptx_api_key') || '';
+    apiInput.addEventListener('input', (e) => localStorage.setItem('promptx_api_key', e.target.value));
   }
 });
 
-// Navigation
-function setupSidebarToggle() {
-  const sidebar = document.getElementById('sidebar');
-  const sidebarToggle = document.getElementById('sidebar-toggle');
-  const sidebarClose = document.getElementById('sidebar-close');
-
-  // Initial state based on screen size to prevent dual headers
-  if (window.innerWidth > 1024) {
-    if (!sidebar.classList.contains('hidden')) {
-      sidebarToggle.classList.add('hidden-toggle');
+// ===== NAVBAR =====
+function setupNavbar() {
+  const navbar = document.getElementById('navbar');
+  let lastScroll = 0;
+  
+  window.addEventListener('scroll', () => {
+    const currentScroll = window.scrollY;
+    if (currentScroll > 50) {
+      navbar.classList.add('scrolled');
+    } else {
+      navbar.classList.remove('scrolled');
     }
-  } else {
-    sidebar.classList.add('hidden');
-    sidebarToggle.classList.remove('hidden-toggle');
-  }
-  
-  sidebarToggle.addEventListener('click', () => {
-    sidebar.classList.remove('hidden');
-    sidebarToggle.classList.add('hidden-toggle');
+    lastScroll = currentScroll;
   });
   
-  sidebarClose.addEventListener('click', () => {
-    sidebar.classList.add('hidden');
-    sidebarToggle.classList.remove('hidden-toggle');
-  });
-  
-  // Close sidebar when clicking outside on mobile
-  document.addEventListener('click', (e) => {
-    if (window.innerWidth <= 1024) {
-      if (!sidebar.contains(e.target) && !sidebarToggle.contains(e.target)) {
-        if (!sidebar.classList.contains('hidden')) {
-          sidebar.classList.add('hidden');
-          sidebarToggle.classList.remove('hidden-toggle');
-        }
+  // Smooth scroll for nav links
+  document.querySelectorAll('a[href^="#"]').forEach(link => {
+    link.addEventListener('click', (e) => {
+      const targetId = link.getAttribute('href');
+      if (targetId === '#') return;
+      const target = document.querySelector(targetId);
+      if (target) {
+        e.preventDefault();
+        target.scrollIntoView({ behavior: 'smooth', block: 'start' });
       }
-    }
+    });
   });
 }
 
+// ===== MOBILE NAV =====
+function setupMobileNav() {
+  const toggle = document.getElementById('nav-mobile-toggle');
+  const navLinks = document.getElementById('nav-links');
+  
+  if (toggle && navLinks) {
+    toggle.addEventListener('click', () => {
+      navLinks.style.display = navLinks.style.display === 'flex' ? 'none' : 'flex';
+      navLinks.style.position = 'absolute';
+      navLinks.style.top = '72px';
+      navLinks.style.left = '0';
+      navLinks.style.right = '0';
+      navLinks.style.flexDirection = 'column';
+      navLinks.style.background = 'rgba(3, 8, 5, 0.98)';
+      navLinks.style.padding = '1rem';
+      navLinks.style.borderBottom = '1px solid var(--border)';
+      navLinks.style.backdropFilter = 'blur(20px)';
+    });
+  }
+}
+
+// ===== MODE TABS =====
+function setupModeTabs() {
+  const tabs = document.querySelectorAll('.app-mode-tab');
+  tabs.forEach(tab => {
+    tab.addEventListener('click', () => {
+      tabs.forEach(t => t.classList.remove('active'));
+      tab.classList.add('active');
+      currentMode = tab.getAttribute('data-mode');
+      updateModeIndicator();
+    });
+  });
+}
+
+// ===== SCROLL ANIMATIONS =====
+function setupScrollAnimations() {
+  const observer = new IntersectionObserver((entries) => {
+    entries.forEach(entry => {
+      if (entry.isIntersecting) {
+        entry.target.classList.add('visible');
+      }
+    });
+  }, {
+    threshold: 0.1,
+    rootMargin: '0px 0px -50px 0px'
+  });
+  
+  document.querySelectorAll('.fade-in').forEach(el => {
+    observer.observe(el);
+  });
+}
+
+// ===== MODEL SELECTOR =====
 function setupModelSelector() {
   const customSelect = document.getElementById('custom-model-select');
   if (!customSelect) return;
@@ -101,60 +149,6 @@ function setupModelSelector() {
   });
 }
 
-function setupNavigation() {
-  const navItems = document.querySelectorAll('.nav-item');
-  const newChatBtn = document.getElementById('new-chat-btn');
-  
-  navItems.forEach(item => {
-    item.addEventListener('click', () => {
-      navItems.forEach(n => n.classList.remove('active'));
-      item.classList.add('active');
-      currentMode = item.getAttribute('data-mode');
-      updateModeIndicator();
-      
-      if (currentMode === 'history') {
-        showHistory();
-      }
-    });
-  });
-  
-  newChatBtn.addEventListener('click', () => {
-    document.getElementById('chat-messages').innerHTML = `
-      <div class="welcome-screen" id="welcome-screen">
-        <img src="Public/bot-img.png" alt="PromptX" class="welcome-logo">
-        <h1>PROMPTX</h1>
-        <p>Transform your prompts with AI</p>
-        
-        <div class="quick-actions">
-          <button class="quick-action" data-action="enhance">
-            <i data-lucide="sparkles"></i>
-            <div>
-              <strong>Enhance Prompt</strong>
-              <span>Make it professional</span>
-            </div>
-          </button>
-          <button class="quick-action" data-action="analyze">
-            <i data-lucide="activity"></i>
-            <div>
-              <strong>Analyze Quality</strong>
-              <span>Get detailed scores</span>
-            </div>
-          </button>
-          <button class="quick-action" data-action="compare">
-            <i data-lucide="git-compare"></i>
-            <div>
-              <strong>Compare Variations</strong>
-              <span>A/B test prompts</span>
-            </div>
-          </button>
-        </div>
-      </div>
-    `;
-    try { if (typeof lucide !== 'undefined') lucide.createIcons(); } catch(e){}
-    setupQuickActions();
-  });
-}
-
 function updateModeIndicator() {
   const modeNames = {
     enhance: 'Enhance Mode',
@@ -162,13 +156,16 @@ function updateModeIndicator() {
     compare: 'Compare Mode',
     history: 'History Mode'
   };
-  document.getElementById('mode-indicator').textContent = modeNames[currentMode];
+  const indicator = document.getElementById('mode-indicator');
+  if (indicator) indicator.textContent = modeNames[currentMode];
 }
 
-// Chat Input
+// ===== CHAT INPUT =====
 function setupChatInput() {
   const chatInput = document.getElementById('chat-input');
   const sendBtn = document.getElementById('send-btn');
+  
+  if (!chatInput || !sendBtn) return;
   
   chatInput.addEventListener('input', () => {
     sendBtn.disabled = !chatInput.value.trim();
@@ -242,11 +239,11 @@ function addAssistantMessage(content) {
 }
 
 function addLoadingMessage() {
-  const msg = addAssistantMessage('<div style="padding: 1rem;">Thinking...</div>');
+  const msg = addAssistantMessage('<div style="padding: 0.75rem; display: flex; align-items: center; gap: 0.75rem;"><div class="typing-cursor" style="width: 3px; height: 16px;"></div> <span style="color: var(--text-secondary); font-size: 0.9rem;">Thinking...</span></div>');
   return msg;
 }
 
-// Enhance Mode
+// ===== ENHANCE MODE =====
 async function handleEnhance(prompt) {
   const loadingMsg = addLoadingMessage();
   
@@ -273,14 +270,14 @@ async function handleEnhance(prompt) {
       const content = `
         <div class="analysis-card">
           <h3 style="margin-bottom: 1rem; color: var(--primary);">✨ Enhanced Prompt</h3>
-          <div style="background: rgba(0,0,0,0.3); padding: 1.25rem; border-radius: 12px; margin-bottom: 1rem; line-height: 1.8;">
+          <div style="background: rgba(0,0,0,0.3); padding: 1.25rem; border-radius: 12px; margin-bottom: 1rem; line-height: 1.8; border: 1px solid var(--border);">
             ${renderMarkdown(result.enhanced)}
           </div>
-          <div style="display: flex; gap: 0.5rem; align-items: center; margin-bottom: 1rem;">
-            <span style="font-size: 0.85rem; color: var(--text-secondary);">
-              🤖 Powered by ${result.model.toUpperCase()}
+          <div style="display: flex; gap: 0.5rem; align-items: center; margin-bottom: 1rem; flex-wrap: wrap;">
+            <span style="font-size: 0.8rem; color: var(--text-secondary); background: var(--primary-light); padding: 0.25rem 0.75rem; border-radius: 100px; border: 1px solid var(--border);">
+              🤖 ${result.model.toUpperCase()}
             </span>
-            <span style="font-size: 0.85rem; color: var(--success);">
+            <span style="font-size: 0.8rem; color: var(--primary); background: var(--primary-light); padding: 0.25rem 0.75rem; border-radius: 100px; border: 1px solid var(--border);">
               📈 +${result.improvement} quality points
             </span>
           </div>
@@ -296,15 +293,15 @@ async function handleEnhance(prompt) {
       `;
       addAssistantMessage(content);
     } else {
-      addAssistantMessage(`<div style="color: #ef4444; padding: 1rem;">❌ Error: ${escapeHtml(result.error || 'Failed to enhance prompt')}</div>`);
+      addAssistantMessage(`<div style="color: var(--error); padding: 1rem;">❌ Error: ${escapeHtml(result.error || 'Failed to enhance prompt')}</div>`);
     }
   } catch (error) {
     loadingMsg.remove();
-    addAssistantMessage('<div style="color: #ef4444; padding: 1rem;">❌ Failed to enhance prompt</div>');
+    addAssistantMessage('<div style="color: var(--error); padding: 1rem;">❌ Failed to enhance prompt. Check your connection.</div>');
   }
 }
 
-// Analyze Mode
+// ===== ANALYZE MODE =====
 async function handleAnalyze(prompt) {
   const loadingMsg = addLoadingMessage();
   
@@ -335,39 +332,39 @@ async function handleAnalyze(prompt) {
         <div class="analysis-card">
           <h3 style="margin-bottom: 1.5rem; color: var(--primary);">📊 Quality Analysis</h3>
           
-          <div style="display: flex; gap: 2rem; justify-content: center; margin-bottom: 2rem; padding: 1.5rem; background: rgba(0,0,0,0.2); border-radius: 12px;">
+          <div style="display: flex; gap: 2rem; justify-content: center; margin-bottom: 2rem; padding: 1.5rem; background: rgba(0,0,0,0.3); border-radius: 12px; border: 1px solid var(--border);">
             <div style="text-align: center;">
-              <div style="font-size: 3rem; font-weight: 800; color: var(--primary);">${analysis.overall}</div>
-              <div style="color: var(--text-secondary); font-size: 0.9rem;">Overall Score</div>
+              <div style="font-size: 2.5rem; font-weight: 800; color: var(--primary); text-shadow: 0 0 20px rgba(0,255,65,0.3);">${analysis.overall}</div>
+              <div style="color: var(--text-secondary); font-size: 0.85rem;">Overall Score</div>
             </div>
             <div style="text-align: center;">
-              <div style="font-size: 3rem; font-weight: 800; color: var(--primary);">${analysis.grade}</div>
-              <div style="color: var(--text-secondary); font-size: 0.9rem;">Grade</div>
+              <div style="font-size: 2.5rem; font-weight: 800; color: var(--primary); text-shadow: 0 0 20px rgba(0,255,65,0.3);">${analysis.grade}</div>
+              <div style="color: var(--text-secondary); font-size: 0.85rem;">Grade</div>
             </div>
           </div>
           
-          <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 1rem; margin-bottom: 1.5rem;">
+          <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 0.75rem; margin-bottom: 1.5rem;">
             ${Object.entries(metrics).map(([key, value]) => `
-              <div style="background: rgba(0,0,0,0.3); padding: 1rem; border-radius: 8px;">
-                <div style="font-size: 0.85rem; color: var(--text-secondary); margin-bottom: 0.5rem; text-transform: capitalize;">
+              <div style="background: rgba(0,0,0,0.3); padding: 0.85rem; border-radius: 8px; border: 1px solid var(--border);">
+                <div style="font-size: 0.78rem; color: var(--text-secondary); margin-bottom: 0.4rem; text-transform: capitalize;">
                   ${key.replace('_', ' ')}
                 </div>
-                <div style="height: 8px; background: rgba(255,255,255,0.1); border-radius: 4px; overflow: hidden; margin-bottom: 0.5rem;">
-                  <div style="height: 100%; width: ${(value.score / 10) * 100}%; background: linear-gradient(90deg, var(--primary), #3b82f6); border-radius: 4px;"></div>
+                <div style="height: 6px; background: rgba(255,255,255,0.05); border-radius: 3px; overflow: hidden; margin-bottom: 0.4rem;">
+                  <div style="height: 100%; width: ${(value.score / 10) * 100}%; background: linear-gradient(90deg, var(--primary), var(--accent)); border-radius: 3px; box-shadow: 0 0 8px rgba(0,255,65,0.3);"></div>
                 </div>
-                <div style="font-size: 1.1rem; font-weight: 700;">${value.score}/10</div>
+                <div style="font-size: 1rem; font-weight: 700; color: var(--primary);">${value.score}/10</div>
               </div>
             `).join('')}
           </div>
           
           ${analysis.suggestions.length > 0 ? `
-            <div style="background: rgba(139, 92, 246, 0.1); border: 1px solid var(--primary); border-radius: 12px; padding: 1.25rem;">
-              <h4 style="margin-bottom: 1rem; color: var(--primary);">💡 Suggestions</h4>
+            <div style="background: var(--primary-light); border: 1px solid var(--border); border-radius: 12px; padding: 1.15rem;">
+              <h4 style="margin-bottom: 0.75rem; color: var(--primary); font-size: 0.95rem;">💡 Suggestions</h4>
               ${analysis.suggestions.map(sug => `
-                <div style="margin-bottom: 1rem; padding-bottom: 1rem; border-bottom: 1px solid var(--border);">
-                  <div style="font-weight: 600; color: var(--primary); margin-bottom: 0.5rem;">${sug.category}</div>
-                  <div style="color: var(--text-secondary); font-size: 0.9rem; margin-bottom: 0.5rem;">${sug.issue}</div>
-                  <div style="color: var(--success); font-size: 0.9rem;">✅ ${sug.fix}</div>
+                <div style="margin-bottom: 0.75rem; padding-bottom: 0.75rem; border-bottom: 1px solid var(--border);">
+                  <div style="font-weight: 600; color: var(--primary); margin-bottom: 0.3rem; font-size: 0.85rem;">${sug.category}</div>
+                  <div style="color: var(--text-secondary); font-size: 0.82rem; margin-bottom: 0.3rem;">${sug.issue}</div>
+                  <div style="color: var(--success); font-size: 0.82rem;">✅ ${sug.fix}</div>
                 </div>
               `).join('')}
             </div>
@@ -376,15 +373,15 @@ async function handleAnalyze(prompt) {
       `;
       addAssistantMessage(content);
     } else {
-      addAssistantMessage(`<div style="color: #ef4444; padding: 1rem;">❌ Error: ${escapeHtml(result.error || 'Failed to analyze prompt')}</div>`);
+      addAssistantMessage(`<div style="color: var(--error); padding: 1rem;">❌ Error: ${escapeHtml(result.error || 'Failed to analyze prompt')}</div>`);
     }
   } catch (error) {
     loadingMsg.remove();
-    addAssistantMessage('<div style="color: #ef4444; padding: 1rem;">❌ Failed to analyze prompt</div>');
+    addAssistantMessage('<div style="color: var(--error); padding: 1rem;">❌ Failed to analyze prompt</div>');
   }
 }
 
-// Compare Mode
+// ===== COMPARE MODE =====
 async function handleCompare(prompt) {
   const loadingMsg = addLoadingMessage();
   
@@ -414,22 +411,22 @@ async function handleCompare(prompt) {
         <div class="analysis-card">
           <h3 style="margin-bottom: 1.5rem; color: var(--primary);">🧪 A/B Test Variations</h3>
           
-          <div style="background: var(--primary-light); border: 1px solid var(--primary); border-radius: 12px; padding: 1rem; margin-bottom: 1.5rem;">
+          <div style="background: var(--primary-light); border: 1px solid var(--border); border-radius: 12px; padding: 1rem; margin-bottom: 1.5rem;">
             <strong style="color: var(--primary);">🏆 Recommendation:</strong>
-            <span style="color: var(--text-primary);"> ${comparison.recommendation.best_variation.toUpperCase()} - ${comparison.recommendation.reason}</span>
+            <span style="color: var(--text-primary);"> ${comparison.recommendation.best_variation.toUpperCase()} — ${comparison.recommendation.reason}</span>
           </div>
           
-          <div style="display: grid; gap: 1rem;">
+          <div style="display: grid; gap: 0.75rem;">
             ${Object.entries(comparison.variations).map(([type, variation]) => `
-              <div style="background: rgba(0,0,0,0.3); border: 1px solid var(--border); border-radius: 12px; padding: 1.25rem;">
-                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
-                  <h4 style="text-transform: capitalize;">${type === 'concise' ? '📝' : type === 'detailed' ? '📚' : '🏗️'} ${type}</h4>
-                  <span style="font-size: 0.85rem; color: var(--text-secondary);">${variation.model || ''}</span>
+              <div style="background: rgba(0,0,0,0.3); border: 1px solid var(--border); border-radius: 12px; padding: 1.15rem;">
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.75rem;">
+                  <h4 style="text-transform: capitalize; font-size: 0.95rem;">${type === 'concise' ? '📝' : type === 'detailed' ? '📚' : '🏗️'} ${type}</h4>
+                  <span style="font-size: 0.78rem; color: var(--text-secondary);">${variation.model || ''}</span>
                 </div>
-                <div style="background: rgba(0,0,0,0.3); padding: 1rem; border-radius: 8px; margin-bottom: 1rem; line-height: 1.6;">
+                <div style="background: rgba(0,0,0,0.3); padding: 0.85rem; border-radius: 8px; margin-bottom: 0.75rem; line-height: 1.6; font-size: 0.88rem; border: 1px solid var(--border);">
                   ${renderMarkdown(variation.text)}
                 </div>
-                <div style="display: flex; gap: 1.5rem; font-size: 0.85rem; color: var(--text-secondary);">
+                <div style="display: flex; gap: 1.25rem; font-size: 0.8rem; color: var(--text-secondary);">
                   <span>Quality: <strong style="color: var(--primary);">${variation.quality.overall}/10</strong></span>
                   <span>Length: <strong style="color: var(--text-primary);">${variation.length} chars</strong></span>
                 </div>
@@ -440,77 +437,35 @@ async function handleCompare(prompt) {
       `;
       addAssistantMessage(content);
     } else {
-      addAssistantMessage(`<div style="color: #ef4444; padding: 1rem;">❌ Error: ${escapeHtml(result.error || 'Failed to generate variations')}</div>`);
+      addAssistantMessage(`<div style="color: var(--error); padding: 1rem;">❌ Error: ${escapeHtml(result.error || 'Failed to generate variations')}</div>`);
     }
   } catch (error) {
     loadingMsg.remove();
-    addAssistantMessage('<div style="color: #ef4444; padding: 1rem;">❌ Failed to generate variations</div>');
+    addAssistantMessage('<div style="color: var(--error); padding: 1rem;">❌ Failed to generate variations</div>');
   }
 }
 
-// History Mode
-function showHistory() {
-  const history = getSafeHistory();
-  const messagesContainer = document.getElementById('chat-messages');
-  messagesContainer.innerHTML = '';
-  
-  if (history.length === 0) {
-    messagesContainer.innerHTML = `
-      <div style="display: flex; flex-direction: column; align-items: center; justify-content: center; height: 100%; text-align: center;">
-        <i data-lucide="clock" style="width: 64px; height: 64px; color: var(--text-secondary); opacity: 0.5; margin-bottom: 1rem;"></i>
-        <h3 style="font-size: 1.25rem; margin-bottom: 0.5rem;">No history yet</h3>
-        <p style="color: var(--text-secondary);">Saved prompts will appear here</p>
-      </div>
-    `;
-    try { if (typeof lucide !== 'undefined') lucide.createIcons(); } catch(e){}
-    return;
-  }
-  
-  const content = `
-    <div style="max-width: 900px; margin: 0 auto; width: 100%;">
-      <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem;">
-        <h2 style="color: var(--primary); margin: 0;">📚 Prompt History</h2>
-        <button onclick="exportHistory()" style="background: rgba(139, 92, 246, 0.2); border: 1px solid var(--primary); color: var(--primary); padding: 0.5rem 1rem; border-radius: 6px; cursor: pointer; display: flex; align-items: center; gap: 0.5rem; transition: background 0.2s;" onmouseover="this.style.background='var(--primary)'; this.style.color='#fff';" onmouseout="this.style.background='rgba(139, 92, 246, 0.2)'; this.style.color='var(--primary)';">
-          <i data-lucide="download" style="width: 16px; height: 16px;"></i> Export JSON
-        </button>
-      </div>
-      <div style="display: flex; flex-direction: column; gap: 1rem;">
-        ${history.map(item => `
-          <div style="background: var(--bg-card); border: 1px solid var(--border); border-radius: 12px; padding: 1.25rem; cursor: pointer; transition: all 0.3s;" 
-               onmouseover="this.style.borderColor='var(--primary)'" 
-               onmouseout="this.style.borderColor='var(--border)'"
-               onclick="loadFromHistory('${item.id}')">
-            <div style="display: flex; justify-content: space-between; margin-bottom: 0.5rem;">
-              <strong style="color: var(--text-primary);">${escapeHtml(item.original.substring(0, 80))}...</strong>
-              <button onclick="event.stopPropagation(); deleteFromHistory('${item.id}')" 
-                      style="background: transparent; border: 1px solid var(--border); border-radius: 6px; padding: 0.25rem 0.5rem; color: var(--text-secondary); cursor: pointer;">
-                <i data-lucide="trash-2" style="width: 14px; height: 14px;"></i>
-              </button>
-            </div>
-            <div style="font-size: 0.85rem; color: var(--text-secondary);">${new Date(item.timestamp).toLocaleString()}</div>
-          </div>
-        `).join('')}
-      </div>
-    </div>
-  `;
-  messagesContainer.innerHTML = content;
-  try { if (typeof lucide !== 'undefined') lucide.createIcons(); } catch(e){}
-}
-
-// Quick Actions
+// ===== QUICK ACTIONS =====
 function setupQuickActions() {
   document.querySelectorAll('.quick-action').forEach(btn => {
     btn.addEventListener('click', () => {
       const action = btn.getAttribute('data-action');
-      document.querySelector(`.nav-item[data-mode="${action}"]`).click();
+      // Update mode tabs
+      const tabs = document.querySelectorAll('.app-mode-tab');
+      tabs.forEach(t => {
+        t.classList.remove('active');
+        if (t.getAttribute('data-mode') === action) {
+          t.classList.add('active');
+        }
+      });
+      currentMode = action;
+      updateModeIndicator();
       document.getElementById('chat-input').focus();
     });
   });
-  // Ensure icons are rendered
-  setTimeout(() => lucide.createIcons(), 100);
 }
 
-// Utility Functions
+// ===== UTILITY FUNCTIONS =====
 function escapeHtml(text) {
   const div = document.createElement('div');
   div.textContent = text;
@@ -530,19 +485,31 @@ function copyText(text) {
   }
 }
 
+function copyCodeSnippet() {
+  const code = `# pip install promptx-py
+from promptx import PromptX
+
+app = PromptX(api_key="px-YOUR_API_KEY")
+
+# Enhance a prompt:
+result = app.enhance('Write a blog post about AI')
+
+# Analyze prompt quality:
+score = app.analyze(result.enhanced)
+print(score.overall)  # → 9.2/10`;
+  
+  copyText(code);
+}
+
 function fallbackCopyTextToClipboard(text) {
   const textArea = document.createElement("textarea");
   textArea.value = text;
-  
-  // Avoid scrolling to bottom
   textArea.style.top = "0";
   textArea.style.left = "0";
   textArea.style.position = "fixed";
-
   document.body.appendChild(textArea);
   textArea.focus();
   textArea.select();
-
   try {
     const successful = document.execCommand('copy');
     if (successful) {
@@ -554,13 +521,11 @@ function fallbackCopyTextToClipboard(text) {
     console.error('Fallback: Oops, unable to copy', err);
     showToast('Error', 'Failed to copy text', 'error');
   }
-
   document.body.removeChild(textArea);
 }
 
 function saveToHistory(original, enhanced) {
   const history = getSafeHistory();
-  // Don't save duplicate bookmarks
   if (!history.find(h => h.original === original && h.enhanced === enhanced)) {
     history.unshift({
       id: Date.now().toString(),
@@ -575,37 +540,15 @@ function saveToHistory(original, enhanced) {
 
 function autoSaveToHistory(original) {
   const history = getSafeHistory();
-  // Avoid saving same prompt consecutively
   if (history.length > 0 && history[0].original === original) return;
-  
   history.unshift({
     id: Date.now().toString(),
     original,
     enhanced: '',
     timestamp: Date.now()
   });
-  // Keep only last 50 prompts
   if (history.length > 50) history.length = 50;
   localStorage.setItem('promptHistory', JSON.stringify(history));
-}
-
-function loadFromHistory(id) {
-  const history = getSafeHistory();
-  const item = history.find(h => h.id === id);
-  if (item) {
-    document.querySelector('.nav-item[data-mode="enhance"]').click();
-    document.getElementById('chat-input').value = item.original;
-    document.getElementById('send-btn').disabled = false;
-    showToast('Loaded', 'Prompt loaded from history', 'success');
-  }
-}
-
-function deleteFromHistory(id) {
-  const history = getSafeHistory();
-  const updated = history.filter(h => h.id !== id);
-  localStorage.setItem('promptHistory', JSON.stringify(updated));
-  showHistory();
-  showToast('Deleted', 'Prompt removed from history', 'success');
 }
 
 function showToast(title, message, type = 'success') {
@@ -618,9 +561,7 @@ function showToast(title, message, type = 'success') {
       <div class="toast-description">${message}</div>
     </div>
   `;
-  
   container.appendChild(toast);
-  
   setTimeout(() => {
     toast.style.animation = 'slideOut 0.3s ease forwards';
     setTimeout(() => toast.remove(), 300);
@@ -642,7 +583,6 @@ function renderMarkdown(text) {
 function exportHistory() {
   const history = getSafeHistory();
   if (history.length === 0) return showToast('Error', 'No history to export', 'error');
-  
   const blob = new Blob([JSON.stringify(history, null, 2)], { type: 'application/json' });
   const url = URL.createObjectURL(blob);
   const a = document.createElement('a');
