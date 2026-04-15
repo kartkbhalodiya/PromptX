@@ -319,6 +319,11 @@ body {
   box-shadow: 0 0 6px rgba(168, 85, 247, 0.6);
 }
 
+.llama-dot {
+  background: #ff3131;
+  box-shadow: 0 0 8px rgba(255, 49, 49, 0.8);
+}
+
 /* ===== MAIN CHAT AREA ===== */
 .chat-main {
   flex: 1;

@@ -99,7 +99,8 @@ function setupModelSelector() {
     gemini: 'Gemini 2.0',
     groq: 'Groq',
     nvidia: 'NVIDIA',
-    mistral: 'Mistral'
+    mistral: 'Mistral',
+    llama_405b: 'Llama 405B'
   };
   
   modelBtns.forEach(btn => {

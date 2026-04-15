@@ -46,6 +46,7 @@ class AIModelFallback:
             {'name': 'groq',   'priority': 2},
             {'name': 'nvidia', 'priority': 3},
             {'name': 'mistral','priority': 4},
+            {'name': 'llama_405b','priority': 5},
         ]
     
     def generate(self, prompt, max_tokens=2000, preferred_model=None, api_key=None):
@@ -78,6 +79,8 @@ class AIModelFallback:
             return self._call_nvidia(prompt, max_tokens, api_key=api_key)
         elif model_name == 'mistral':
             return self._call_mistral(prompt, max_tokens, api_key=api_key)
+        elif model_name == 'llama_405b':
+            return self._call_llama_405b(prompt, max_tokens, api_key=api_key)
     
     def _call_gemini(self, prompt, api_key=None):
         key = api_key or os.getenv('GEMINI_API_KEY')
@@ -153,6 +156,27 @@ class AIModelFallback:
         )
         response.raise_for_status()
         return response.json()['choices'][0]['message']['content'].strip()
+
+    def _call_llama_405b(self, prompt, max_tokens, api_key=None):
+        key = api_key or os.getenv('LLAMA_405B_API_KEY')
+        if not key:
+            raise ValueError("LLAMA_405B_API_KEY not found")
+        
+        from openai import OpenAI
+        client = OpenAI(
+            base_url="https://integrate.api.nvidia.com/v1",
+            api_key=key
+        )
+
+        completion = client.chat.completions.create(
+            model="meta/llama-3.1-405b-instruct",
+            messages=self._split_prompt(prompt),
+            temperature=0.2,
+            top_p=0.7,
+            max_tokens=min(max_tokens, 4096),
+            stream=False
+        )
+        return completion.choices[0].message.content.strip()
 
     def _split_prompt(self, prompt):
         """Separate system and user parts if combined."""
@@ -514,7 +538,7 @@ Ensure the final output is exceptionally professional and visually structured us
         # Fetch variations routing to different models to avoid free-tier API rate limits (HTTP 429)
         concise = fetch_variation(c_prompt, 800, preferred_model='gemini', api_key=api_key)
         detailed = fetch_variation(d_prompt, 2048, preferred_model='mistral', api_key=api_key)
-        structured = fetch_variation(s_prompt, 2048, preferred_model='mistral', api_key=api_key)
+        structured = fetch_variation(s_prompt, 2048, preferred_model='llama_405b', api_key=api_key)
         
         return {
             'concise': concise,
