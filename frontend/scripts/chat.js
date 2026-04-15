@@ -305,8 +305,21 @@ function addUserMessage(text) {
   const container = document.getElementById('chat-messages');
   const div = document.createElement('div');
   div.className = 'message user';
+
+  // Render URLs as clickable link previews inside the user bubble
+  const urls = extractUrls(text);
+  let displayHtml = escapeHtml(text);
+  urls.forEach(url => {
+    const domain = getDomain(url);
+    const favicon = getFaviconUrl(url);
+    const chip = `<a href="${escapeHtml(url)}" target="_blank" rel="noopener" class="url-inline-chip">` +
+      (favicon ? `<img src="${favicon}" width="14" height="14" style="border-radius:2px;flex-shrink:0;" onerror="this.style.display='none'">` : '🌐') +
+      `<span>${escapeHtml(domain)}</span><span style="opacity:0.5;font-size:0.65rem;">↗</span></a>`;
+    displayHtml = displayHtml.replace(escapeHtml(url), chip);
+  });
+
   div.innerHTML = `
-    <div class="message-content">${escapeHtml(text)}</div>
+    <div class="message-content">${displayHtml}</div>
     <div class="message-avatar">U</div>
   `;
   container.appendChild(div);
@@ -327,6 +340,9 @@ function addAssistantMessage(content) {
   return div;
 }
 
+// ===== URL DETECTION =====
+const URL_REGEX = /https?:\/\/[^\s<>"']+|www\.[^\s<>"']+/gi;
+
 function addLoadingMessage() {
   return addAssistantMessage(`
     <div class="typing-dots">
@@ -335,26 +351,125 @@ function addLoadingMessage() {
   `);
 }
 
+function extractUrls(text) {
+  const matches = text.match(URL_REGEX) || [];
+  return matches.map(u => u.startsWith('http') ? u : `https://${u}`);
+}
+
+function getDomain(url) {
+  try { return new URL(url).hostname.replace('www.', ''); } catch { return url; }
+}
+
+function getFaviconUrl(url) {
+  try {
+    const origin = new URL(url).origin;
+    return `https://www.google.com/s2/favicons?domain=${origin}&sz=32`;
+  } catch { return null; }
+}
+
+// ===== THINKING PROGRESS UI =====
+function addThinkingMessage(steps) {
+  const container = document.getElementById('chat-messages');
+  const div = document.createElement('div');
+  div.className = 'message assistant thinking-msg';
+  div.innerHTML = `
+    <div class="message-avatar"><img src="Public/bot-img.png" alt="AI" style="width:100%;height:100%;object-fit:cover;border-radius:10px;"></div>
+    <div class="message-content thinking-content">
+      <div class="thinking-header">
+        <div class="thinking-spinner"></div>
+        <span class="thinking-title">Analyzing...</span>
+      </div>
+      <div class="thinking-steps" id="thinking-steps-${div.id || Date.now()}">
+        ${steps.map((s, i) => `
+          <div class="thinking-step" data-step="${i}">
+            <span class="step-icon">○</span>
+            <span class="step-text">${s}</span>
+          </div>
+        `).join('')}
+      </div>
+    </div>
+  `;
+  container.appendChild(div);
+  container.scrollTop = container.scrollHeight;
+
+  // Give the steps div a stable ID
+  const stepsEl = div.querySelector('.thinking-steps');
+  stepsEl.id = `ts-${Date.now()}`;
+  div._stepsId = stepsEl.id;
+
+  return div;
+}
+
+function activateThinkingStep(thinkingDiv, stepIndex, status = 'active') {
+  // status: 'active' | 'done' | 'error'
+  const steps = thinkingDiv.querySelectorAll('.thinking-step');
+  steps.forEach((s, i) => {
+    if (i < stepIndex) {
+      s.querySelector('.step-icon').textContent = '✓';
+      s.classList.remove('active', 'error');
+      s.classList.add('done');
+    } else if (i === stepIndex) {
+      s.querySelector('.step-icon').textContent = status === 'error' ? '✗' : '◉';
+      s.classList.remove('done', 'error');
+      s.classList.add(status === 'error' ? 'error' : 'active');
+    }
+  });
+  const titleEl = thinkingDiv.querySelector('.thinking-title');
+  if (titleEl) {
+    const texts = thinkingDiv.querySelectorAll('.thinking-step .step-text');
+    if (texts[stepIndex]) titleEl.textContent = texts[stepIndex].textContent;
+  }
+  thinkingDiv.closest('.chat-messages-area, #chat-messages').scrollTop = 99999;
+}
+
 // ===== ENHANCE =====
 async function handleEnhance(prompt) {
-  const loadingMsg = addLoadingMessage();
-  
+  const urls = extractUrls(prompt);
+  const isUrlRequest = urls.length > 0;
+
+  // For URL requests show a richer thinking UI
+  let loadingMsg;
+  if (isUrlRequest) {
+    const domain = getDomain(urls[0]);
+    loadingMsg = addThinkingMessage([
+      `Connecting to ${domain}`,
+      `Crawling pages (features, pricing, docs, API...)`,
+      `Searching web for tech stack & documentation`,
+      `Synthesising deep analysis with AI`,
+    ]);
+    activateThinkingStep(loadingMsg, 0);
+  } else {
+    loadingMsg = addLoadingMessage();
+  }
+
   try {
     const body = { prompt };
     if (selectedModel !== 'auto') body.model = selectedModel;
-    
+
     const apiKey = document.getElementById('api-key-input')?.value || '';
     const headers = { 'Content-Type': 'application/json' };
     if (apiKey) headers['X-API-Key'] = apiKey;
-    
+
+    // Simulate step progression for URL requests (backend is synchronous)
+    let stepTimer;
+    if (isUrlRequest) {
+      let step = 0;
+      stepTimer = setInterval(() => {
+        step = Math.min(step + 1, 3);
+        activateThinkingStep(loadingMsg, step);
+      }, 4000);
+    }
+
     const res = await fetch(`${API_BASE}/enhance`, {
       method: 'POST', headers, body: JSON.stringify(body)
     });
     const result = await res.json();
+
+    if (stepTimer) clearInterval(stepTimer);
     loadingMsg.remove();
-    
+
     if (result.success) {
-      // Welcome / greeting response — render as plain chat bubble
+      // ── Welcome / greeting ──────────────────────────────────────────────
       if (result.type === 'welcome') {
         const html = `<div class="welcome-reply">${renderMarkdown(result.enhanced)}</div>`;
         addAssistantMessage(html);
@@ -362,45 +477,215 @@ async function handleEnhance(prompt) {
         return;
       }
 
-      // URL analysis response
+      // ── URL / website analysis ──────────────────────────────────────────
       if (result.type === 'url_analysis') {
+        const url = result.url;
+        const domain = getDomain(url);
+        const favicon = getFaviconUrl(url);
         const pagesScraped = result.pages_scraped || 0;
         const totalChars = result.total_chars || result.char_count || 0;
-        const pagesList = (result.pages || []).map(p =>
-          `<a href="${escapeHtml(p.url)}" target="_blank" rel="noopener" style="display:block;font-size:0.72rem;color:var(--accent);text-decoration:none;padding:0.15rem 0;font-family:var(--font-mono);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;" title="${escapeHtml(p.url)}">↗ ${escapeHtml(p.title || p.url)}</a>`
-        ).join('');
+        const rawText = result.enhanced || '';
 
-        const scrapeNote = result.scrape_error
-          ? `<span style="color:var(--warning);font-size:0.72rem;">⚠️ Could not scrape — analysis from web search only</span>`
-          : `<span style="font-size:0.72rem;color:var(--text-muted);">📄 ${pagesScraped} pages · ${totalChars.toLocaleString()} chars extracted</span>`;
+        // ── Page chips ──────────────────────────────────────────────────
+        const pageChips = (result.pages || []).map(p => {
+          const path = (() => { try { return new URL(p.url).pathname || '/'; } catch { return '/'; } })();
+          return `<a href="${escapeHtml(p.url)}" target="_blank" rel="noopener" class="page-chip" title="${escapeHtml(p.url)}">
+            <img src="https://www.google.com/s2/favicons?domain=${escapeHtml(p.url)}&sz=16" width="12" height="12" style="border-radius:2px;flex-shrink:0;" onerror="this.style.display='none'">
+            <span>${escapeHtml(path === '/' ? domain : path)}</span>
+          </a>`;
+        }).join('');
+
+        // ── Split the AI response into named sections ───────────────────
+        // Sections are delimited by ## or # headings
+        function splitSections(text) {
+          const lines = text.split('\n');
+          const sections = [];
+          let current = { level: 2, title: 'Overview', body: [] };
+          let hasHeaders = false;
+          
+          for (const line of lines) {
+            const h1 = line.match(/^#\s+(.+)/);
+            const h2 = line.match(/^##\s+(.+)/);
+            const h3 = line.match(/^###\s+(.+)/);
+            
+            if (h1 || h2 || h3) {
+              hasHeaders = true;
+              if (current && current.body.join('').trim().length > 0) sections.push(current);
+              current = { level: 2, title: (h1 || h2 || h3)[1].trim(), body: [] };
+            } else if (current) {
+              current.body.push(line);
+            }
+          }
+          
+          if (current && current.body.join('').trim().length > 0) sections.push(current);
+          return sections;
+        }
+
+        // ── Detect if a section is the "How to Build" or "AI Prompts" section
+        function isBuildSection(title) {
+          const t = title.toLowerCase();
+          return t.includes('how to build') || t.includes('build this') || t.includes('step-by-step');
+        }
+        function isAgentSection(title) {
+          const t = title.toLowerCase();
+          return t.includes('ai agent') || t.includes('ready prompt') || t.includes('copy & use') || t.includes('copy and use');
+        }
+        function isFeatureSection(title) {
+          const t = title.toLowerCase();
+          return t.includes('feature') || t.includes('functionality');
+        }
+
+        // ── Build use-case diagram from feature list ────────────────────
+        function buildUseCaseDiagram(text) {
+          // Extract bullet points that look like features
+          const features = [];
+          const lines = text.split('\n');
+          for (const line of lines) {
+            const m = line.match(/^[-*•]\s+\*{0,2}([^*\n:]{4,60})\*{0,2}/);
+            if (m) features.push(m[1].trim().replace(/[^a-zA-Z0-9 &]/g, '').trim());
+          }
+          const top = features.slice(0, 10);
+          if (top.length < 3) return '';
+          const nodes = top.map((f, i) => `  User --> F${i}["${f}"]`).join('\n');
+          return 'flowchart TD\n  User(["👤 User"])\n' + nodes;
+        }
+
+        const sections = splitSections(rawText);
+
+        // ── Render each section as a card ───────────────────────────────
+        let sectionsHtml = '';
+        let buildHtml = '';
+        let agentHtml = '';
+        let featureDiagram = '';
+
+        for (const sec of sections) {
+          const bodyText = sec.body.join('\n');
+          const rendered = renderMarkdown(bodyText);
+
+          if (isAgentSection(sec.title)) {
+            // AI Agent prompts — special styling
+            agentHtml += `
+              <div class="analysis-section agent-section">
+                <div class="section-heading agent-heading">
+                  <span class="section-emoji">🤖</span>
+                  <span>${escapeHtml(sec.title)}</span>
+                </div>
+                <div class="agent-section-body">${rendered}</div>
+              </div>`;
+          } else if (isBuildSection(sec.title)) {
+            buildHtml += `
+              <div class="analysis-section build-section">
+                <div class="section-heading build-heading">
+                  <span class="section-emoji">🏗️</span>
+                  <span>${escapeHtml(sec.title)}</span>
+                </div>
+                <div class="build-section-body">${rendered}</div>
+              </div>`;
+          } else if (isFeatureSection(sec.title)) {
+            if (!featureDiagram) featureDiagram = buildUseCaseDiagram(bodyText);
+            sectionsHtml += `
+              <details class="analysis-section feature-section" open>
+                <summary class="section-heading feature-heading">
+                  <span class="section-emoji">✨</span>
+                  <span>${escapeHtml(sec.title)}</span>
+                  <span class="section-toggle">▾</span>
+                </summary>
+                <div class="section-body">${rendered}</div>
+              </details>`;
+          } else {
+            // Generic collapsible section
+            const emoji = sec.title.match(/^[\u{1F300}-\u{1FFFF}🌐✨🏗️🔌📡🎨📊🔐⚠️💡]/u)?.[0] || '📌';
+            sectionsHtml += `
+              <details class="analysis-section" open>
+                <summary class="section-heading">
+                  <span class="section-emoji">${emoji}</span>
+                  <span>${escapeHtml(sec.title.replace(/^[\u{1F300}-\u{1FFFF}🌐✨🏗️🔌📡🎨📊🔐⚠️💡]\s*/u, ''))}</span>
+                  <span class="section-toggle">▾</span>
+                </summary>
+                <div class="section-body">${rendered}</div>
+              </details>`;
+          }
+        }
+
+        // ── Use-case diagram block ──────────────────────────────────────
+        // We render it directly into a <pre class="mermaid"> to avoid DOMPurify stripping the mermaid script/classes
+        const diagramHtml = featureDiagram ? `
+          <div class="analysis-section diagram-section">
+            <div class="section-heading diagram-heading">
+              <span class="section-emoji">📐</span>
+              <span>Use Case Diagram</span>
+            </div>
+            <div class="section-body"><pre class="mermaid" style="background:transparent;border:none;">\n${featureDiagram}\n</pre></div>
+          </div>` : '';
 
         const html = `
-          <div class="analysis-card">
-            <div style="display:flex;align-items:center;gap:0.6rem;margin-bottom:0.85rem;flex-wrap:wrap;">
-              <span style="font-size:0.75rem;font-weight:700;color:var(--accent);background:rgba(0,229,255,0.1);padding:0.25rem 0.75rem;border-radius:100px;border:1px solid rgba(0,229,255,0.3);">
-                🌐 Deep Website Analysis
-              </span>
-              <span style="font-size:0.72rem;color:var(--text-secondary);background:var(--primary-light);padding:0.2rem 0.65rem;border-radius:100px;border:1px solid var(--border);font-family:var(--font-mono);">
-                ${result.model.toUpperCase()}
-              </span>
+          <div class="analysis-card url-analysis-card">
+
+            <!-- ── Site header ── -->
+            <div class="url-site-header">
+              <div class="url-site-info">
+                ${favicon ? `<img src="${favicon}" width="22" height="22" class="url-favicon" onerror="this.style.display='none'">` : ''}
+                <div>
+                  <div class="url-site-title">${escapeHtml(result.page_title || result.site_title || domain)}</div>
+                  <a href="${escapeHtml(url)}" target="_blank" rel="noopener" class="url-site-link">${escapeHtml(url)}</a>
+                </div>
+              </div>
+              <div class="url-badges">
+                <span class="url-badge badge-cyan">🌐 Deep Analysis</span>
+                <span class="url-badge badge-mono">${result.model.toUpperCase()}</span>
+              </div>
             </div>
-            <div style="background:rgba(0,0,0,0.25);padding:0.75rem 1rem;border-radius:8px;margin-bottom:0.85rem;border:1px solid var(--border);">
-              <div style="font-size:0.85rem;font-weight:600;color:var(--text-primary);margin-bottom:0.3rem;">${escapeHtml(result.page_title || result.site_title || result.url)}</div>
-              <a href="${escapeHtml(result.url)}" target="_blank" rel="noopener" style="font-size:0.72rem;color:var(--accent);text-decoration:none;font-family:var(--font-mono);">${escapeHtml(result.url)}</a>
-              <div style="margin-top:0.4rem;">${scrapeNote}</div>
-              ${pagesList ? `
-              <details style="margin-top:0.5rem;">
-                <summary style="cursor:pointer;font-size:0.72rem;color:var(--text-muted);">Pages crawled (${pagesScraped})</summary>
-                <div style="margin-top:0.35rem;padding-left:0.5rem;">${pagesList}</div>
-              </details>` : ''}
+
+            <!-- ── Stats row ── -->
+            <div class="url-stats-row">
+              <div class="url-stat">
+                <span class="url-stat-value">${pagesScraped}</span>
+                <span class="url-stat-label">pages crawled</span>
+              </div>
+              <div class="url-stat">
+                <span class="url-stat-value">${totalChars > 0 ? (totalChars/1000).toFixed(0)+'k' : '—'}</span>
+                <span class="url-stat-label">chars read</span>
+              </div>
+              <div class="url-stat">
+                <span class="url-stat-value">${domain}</span>
+                <span class="url-stat-label">domain</span>
+              </div>
             </div>
-            <div style="line-height:1.8;">${renderMarkdown(result.enhanced)}</div>
-            <div class="message-actions" style="margin-top:1rem;">
-              <button onclick="copyText(decodeURIComponent('${encodeURIComponent(result.enhanced).replace(/'/g, '%27')}'))">
-                <i data-lucide="copy"></i> Copy Analysis
+
+            <!-- ── Pages crawled chips ── -->
+            ${pageChips ? `
+            <div class="url-pages-section">
+              <div class="url-pages-label">Pages crawled</div>
+              <div class="url-pages-chips">${pageChips}</div>
+            </div>` : ''}
+
+            ${result.scrape_error ? `<div class="url-scrape-warning">⚠️ Could not scrape live content — analysis from web search only</div>` : ''}
+
+            <!-- ── Analysis sections ── -->
+            <div class="url-analysis-body">
+              ${sectionsHtml}
+              ${diagramHtml}
+
+              ${buildHtml ? `
+              <div class="build-divider">
+                <span>🏗️ HOW TO BUILD THIS</span>
+              </div>
+              ${buildHtml}` : ''}
+
+              ${agentHtml ? `
+              <div class="build-divider agent-divider">
+                <span>🤖 AI AGENT READY PROMPTS</span>
+              </div>
+              ${agentHtml}` : ''}
+            </div>
+
+            <!-- ── Actions ── -->
+            <div class="message-actions" style="padding:0 1.25rem 1rem;">
+              <button onclick="copyText(decodeURIComponent('${encodeURIComponent(rawText).replace(/'/g, '%27')}'))">
+                <i data-lucide="copy"></i> Copy Full Analysis
               </button>
-              <a href="${escapeHtml(result.url)}" target="_blank" rel="noopener" style="display:inline-flex;align-items:center;gap:0.35rem;padding:0.35rem 0.75rem;background:transparent;border:1px solid var(--border);border-radius:6px;color:var(--text-secondary);font-size:0.75rem;text-decoration:none;">
-                <i data-lucide="external-link"></i> Visit Site
+              <a href="${escapeHtml(url)}" target="_blank" rel="noopener" class="url-visit-btn">
+                <i data-lucide="external-link"></i> Open Site
               </a>
             </div>
           </div>
@@ -408,33 +693,25 @@ async function handleEnhance(prompt) {
         addAssistantMessage(html);
         saveMsgToSession('assistant', html);
         try { if (typeof lucide !== 'undefined') lucide.createIcons(); } catch(e) {}
+        try { if (window.mermaid) mermaid.run({ querySelector: '.mermaid' }); } catch(e) {}
         return;
       }
+
+      // ── Deep research ───────────────────────────────────────────────────
+      if (result.type === 'deep_research') {
         const html = `
           <div class="analysis-card">
             <div style="display:flex;align-items:center;gap:0.6rem;margin-bottom:1rem;flex-wrap:wrap;">
-              <span style="font-size:0.75rem;font-weight:700;color:#f97316;background:rgba(249,115,22,0.1);padding:0.25rem 0.75rem;border-radius:100px;border:1px solid rgba(249,115,22,0.3);">
-                🔬 Deep Research Mode
-              </span>
-              <span style="font-size:0.72rem;color:var(--text-secondary);background:var(--primary-light);padding:0.2rem 0.65rem;border-radius:100px;border:1px solid var(--border);font-family:var(--font-mono);">
-                ${result.model.toUpperCase()}
-              </span>
-              <span style="font-size:0.72rem;color:var(--text-secondary);background:var(--primary-light);padding:0.2rem 0.65rem;border-radius:100px;border:1px solid var(--border);font-family:var(--font-mono);">
-                ${result.classification.category.toUpperCase()}
-              </span>
+              <span style="font-size:0.75rem;font-weight:700;color:#f97316;background:rgba(249,115,22,0.1);padding:0.25rem 0.75rem;border-radius:100px;border:1px solid rgba(249,115,22,0.3);">🔬 Deep Research</span>
+              <span style="font-size:0.72rem;color:var(--text-secondary);background:var(--primary-light);padding:0.2rem 0.65rem;border-radius:100px;border:1px solid var(--border);font-family:var(--font-mono);">${result.model.toUpperCase()}</span>
+              <span style="font-size:0.72rem;color:var(--text-secondary);background:var(--primary-light);padding:0.2rem 0.65rem;border-radius:100px;border:1px solid var(--border);font-family:var(--font-mono);">${result.classification.category.toUpperCase()}</span>
             </div>
             ${result.analysis ? `
             <details style="margin-bottom:1rem;">
-              <summary style="cursor:pointer;font-size:0.78rem;color:var(--text-muted);font-family:var(--font-mono);padding:0.5rem;background:rgba(0,0,0,0.2);border-radius:6px;border:1px solid var(--border);">
-                📋 Request Analysis (click to expand)
-              </summary>
-              <div style="padding:0.75rem;background:rgba(0,0,0,0.15);border-radius:0 0 6px 6px;font-size:0.82rem;color:var(--text-secondary);line-height:1.6;border:1px solid var(--border);border-top:none;">
-                ${renderMarkdown(result.analysis)}
-              </div>
+              <summary style="cursor:pointer;font-size:0.78rem;color:var(--text-muted);padding:0.5rem;background:rgba(0,0,0,0.2);border-radius:6px;border:1px solid var(--border);">📋 Request Analysis (expand)</summary>
+              <div style="padding:0.75rem;background:rgba(0,0,0,0.15);border-radius:0 0 6px 6px;font-size:0.82rem;color:var(--text-secondary);line-height:1.6;border:1px solid var(--border);border-top:none;">${renderMarkdown(result.analysis)}</div>
             </details>` : ''}
-            <div style="line-height:1.8;">
-              ${renderMarkdown(result.enhanced)}
-            </div>
+            <div style="line-height:1.8;">${renderMarkdown(result.enhanced)}</div>
             <div class="message-actions" style="margin-top:1rem;">
               <button onclick="copyText(decodeURIComponent('${encodeURIComponent(result.enhanced).replace(/'/g, '%27')}'))">
                 <i data-lucide="copy"></i> Copy Full Answer
@@ -448,7 +725,7 @@ async function handleEnhance(prompt) {
         return;
       }
 
-      // Standard enhancement response
+      // ── Standard enhancement ────────────────────────────────────────────
       const html = `
         <div class="analysis-card">
           <h3 style="margin-bottom:1rem;color:var(--primary);font-family:var(--font-mono);font-size:0.9rem;">[&gt;_] Enhanced Prompt</h3>
@@ -456,15 +733,9 @@ async function handleEnhance(prompt) {
             ${renderMarkdown(result.enhanced)}
           </div>
           <div style="display:flex;gap:0.5rem;align-items:center;margin-bottom:0.85rem;flex-wrap:wrap;">
-            <span style="font-size:0.72rem;color:var(--text-secondary);background:var(--primary-light);padding:0.2rem 0.65rem;border-radius:100px;border:1px solid var(--border);font-family:var(--font-mono);">
-              ${result.model.toUpperCase()}
-            </span>
-            <span style="font-size:0.72rem;color:var(--text-secondary);background:var(--primary-light);padding:0.2rem 0.65rem;border-radius:100px;border:1px solid var(--border);font-family:var(--font-mono);">
-              ${result.classification.category.toUpperCase()}
-            </span>
-            <span style="font-size:0.72rem;color:var(--primary);background:var(--primary-light);padding:0.2rem 0.65rem;border-radius:100px;border:1px solid var(--border);font-family:var(--font-mono);">
-              ${result.original_score.quality} → ${result.enhanced_score.quality} (+${result.improvement} pts)
-            </span>
+            <span style="font-size:0.72rem;color:var(--text-secondary);background:var(--primary-light);padding:0.2rem 0.65rem;border-radius:100px;border:1px solid var(--border);font-family:var(--font-mono);">${result.model.toUpperCase()}</span>
+            <span style="font-size:0.72rem;color:var(--text-secondary);background:var(--primary-light);padding:0.2rem 0.65rem;border-radius:100px;border:1px solid var(--border);font-family:var(--font-mono);">${result.classification.category.toUpperCase()}</span>
+            <span style="font-size:0.72rem;color:var(--primary);background:var(--primary-light);padding:0.2rem 0.65rem;border-radius:100px;border:1px solid var(--border);font-family:var(--font-mono);">${result.original_score.quality} → ${result.enhanced_score.quality} (+${result.improvement} pts)</span>
           </div>
           <div class="message-actions">
             <button onclick="copyText(decodeURIComponent('${encodeURIComponent(result.enhanced).replace(/'/g, '%27')}'))">
@@ -476,12 +747,12 @@ async function handleEnhance(prompt) {
       addAssistantMessage(html);
       saveMsgToSession('assistant', html);
     } else {
-      const errHtml = `<div class="error-msg">[ERR] ${escapeHtml(result.error || 'Enhancement failed')}</div>`;
+      const errHtml = `<div class="error-msg">${escapeHtml(result.error || 'Enhancement failed')}</div>`;
       addAssistantMessage(errHtml);
       saveMsgToSession('assistant', errHtml);
     }
   } catch (error) {
-    loadingMsg.remove();
+    if (loadingMsg) loadingMsg.remove();
     const errHtml = `<div class="error-msg">Connection failed — is the server running at ${API_BASE}?</div>`;
     addAssistantMessage(errHtml);
     saveMsgToSession('assistant', errHtml);
