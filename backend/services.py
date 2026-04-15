@@ -432,8 +432,8 @@ def analyze_quality_heatmap(prompt):
 def generate_ab_variations(prompt):
     """Generate 3 variations with fallback concurrently to prevent Vercel Application Timeouts"""
     
-    def fetch_variation(style_prompt, max_tokens):
-        result = generate_with_fallback(style_prompt, max_tokens)
+    def fetch_variation(style_prompt, max_tokens, preferred_model=None):
+        result = generate_with_fallback(style_prompt, max_tokens, preferred_model=preferred_model)
         return {'text': result['text'], 'length': len(result['text']), 'model': result['model']}
 
     try:
@@ -448,18 +448,22 @@ You MUST include:
 4. Edge cases, performance considerations, and scalability.
 Make it as detailed and exhaustive as possible:\n{prompt}"""
 
-        s_prompt = f"""Rewrite this prompt with an ultra-professional, highly organized structure.
-It MUST include:
-1. Clear headers and bullet points.
-2. An architectural system diagram using Mermaid.js syntax (e.g. ```mermaid ...```).
-3. Step-by-step integration and workflow details.
-4. Specific technology stack recommendations.
-Make it visually appealing and highly technical:\n{prompt}"""
+        s_prompt = f"""Rewrite this prompt using the advanced CREATE Prompt Engineering Algorithm.
+Structure the final output as a comprehensive, highly-organized technical document. It MUST include:
 
-        # Fetch variations sequentially to avoid free-tier concurrency limits
-        concise = fetch_variation(c_prompt, 800)
-        detailed = fetch_variation(d_prompt, 2048)
-        structured = fetch_variation(s_prompt, 2048)
+1. **Context & Role**: Set the precise persona and background information.
+2. **Request**: The core task defined with unambiguous clarity.
+3. **Explanation (Diagram)**: Provide a visual architecture or logic flow using a Mermaid.js diagram (e.g. ```mermaid ...```). This is mandatory to elaborate and explain complex structures.
+4. **Action Steps**: Step-by-step breakdown of how the task should be executed.
+5. **Tone & Constraints**: Explicit boundaries, technologies, and styling rules.
+6. **Extras/Examples**: Include edge cases or output format specifications.
+
+Ensure the final output is exceptionally professional and visually structured using Markdown headers and bullet points. Here is the original prompt to enhance:\n{prompt}"""
+
+        # Fetch variations routing to different models to avoid free-tier API rate limits (HTTP 429)
+        concise = fetch_variation(c_prompt, 800, preferred_model='gemini')
+        detailed = fetch_variation(d_prompt, 2048, preferred_model='nvidia_mistral')
+        structured = fetch_variation(s_prompt, 2048, preferred_model='nvidia_qwen')
         
         return {
             'concise': concise,
@@ -468,7 +472,7 @@ Make it visually appealing and highly technical:\n{prompt}"""
         }
             
     except Exception as e:
-        print(f"Parallel variation failed: {e}")
+        print(f"Variation generation failed: {e}")
         return {
             'concise': {'text': prompt, 'length': len(prompt), 'model': 'fallback'},
             'detailed': {'text': prompt, 'length': len(prompt), 'model': 'fallback'},

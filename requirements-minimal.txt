@@ -1,0 +1,10 @@
+django
+djangorestframework
+django-cors-headers
+django-ratelimit
+openai
+redis
+django-redis
+requests
+python-dotenv
+gunicorn

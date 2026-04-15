@@ -1,0 +1,153 @@
+"""Models for PromptX."""
+
+import uuid
+from django.db import models
+from django.contrib.auth.models import User
+from django.core.validators import MinValueValidator, MaxValueValidator
+
+
+class PromptCategory(models.Model):
+    """Categorization of prompt domains."""
+    name = models.CharField(max_length=100, unique=True)
+    description = models.TextField(blank=True)
+    default_role = models.TextField(blank=True)
+    default_constraints = models.JSONField(default=list)
+    is_active = models.BooleanField(default=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        verbose_name_plural = "Prompt Categories"
+        ordering = ['name']
+
+    def __str__(self):
+        return self.name
+
+
+class EnhancementRule(models.Model):
+    """Configurable rules for prompt enhancement."""
+    RULE_TYPES = [
+        ('add_context', 'Add Context'),
+        ('add_constraints', 'Add Constraints'),
+        ('add_format', 'Add Format'),
+        ('add_role', 'Add Role'),
+        ('add_examples', 'Add Examples'),
+        ('restructure', 'Restructure'),
+        ('clarify', 'Clarify'),
+        ('expand', 'Expand'),
+    ]
+
+    name = models.CharField(max_length=200)
+    rule_type = models.CharField(max_length=50, choices=RULE_TYPES)
+    trigger_pattern = models.TextField(
+        help_text="Regex pattern that triggers this rule"
+    )
+    action_template = models.TextField(
+        help_text="Template for the enhancement action"
+    )
+    priority = models.IntegerField(default=0)
+    applicable_intents = models.JSONField(
+        default=list,
+        help_text="List of intents this rule applies to. Empty = all."
+    )
+    applicable_domains = models.JSONField(
+        default=list,
+        help_text="List of domains this rule applies to. Empty = all."
+    )
+    is_active = models.BooleanField(default=True)
+    success_rate = models.FloatField(default=0.0)
+    usage_count = models.IntegerField(default=0)
+
+    class Meta:
+        ordering = ['-priority']
+
+    def __str__(self):
+        return f"[{self.rule_type}] {self.name}"
+
+
+class PromptHistory(models.Model):
+    """Complete audit trail of all enhancements."""
+    LEVELS = [
+        ('basic', 'Basic'),
+        ('intermediate', 'Intermediate'),
+        ('advanced', 'Advanced'),
+        ('expert', 'Expert'),
+    ]
+
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    user = models.ForeignKey(
+        User, on_delete=models.SET_NULL, null=True, blank=True,
+        related_name='prompt_history'
+    )
+    session_id = models.CharField(max_length=100, blank=True, db_index=True)
+
+    # Prompts
+    original_prompt = models.TextField()
+    enhanced_prompt = models.TextField()
+    enhancement_level = models.CharField(max_length=20, choices=LEVELS)
+
+    # Analysis results
+    detected_intent = models.CharField(max_length=100)
+    detected_domain = models.CharField(max_length=100)
+    detected_task_type = models.CharField(max_length=100)
+    complexity_level = models.CharField(max_length=50, default='medium')
+
+    # Quality scores
+    original_quality_score = models.FloatField(
+        validators=[MinValueValidator(0.0), MaxValueValidator(1.0)]
+    )
+    enhanced_quality_score = models.FloatField(
+        validators=[MinValueValidator(0.0), MaxValueValidator(1.0)]
+    )
+    improvement_delta = models.FloatField(default=0.0)
+
+    # Detailed scores (stored as JSON)
+    original_scores_detail = models.JSONField(default=dict)
+    enhanced_scores_detail = models.JSONField(default=dict)
+
+    # Validation results
+    validation_passed = models.BooleanField(default=True)
+    validation_issues = models.JSONField(default=list)
+    validation_warnings = models.JSONField(default=list)
+
+    # Metadata
+    processing_time_ms = models.FloatField(default=0.0)
+    enhancement_method = models.CharField(max_length=50, default='rule_based')
+    pipeline_stages_completed = models.JSONField(default=list)
+    rules_applied = models.JSONField(default=list)
+
+    # Feedback
+    user_rating = models.IntegerField(null=True, blank=True,
+        validators=[MinValueValidator(1), MaxValueValidator(5)])
+    user_feedback = models.TextField(blank=True)
+
+    created_at = models.DateTimeField(auto_now_add=True, db_index=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        ordering = ['-created_at']
+        indexes = [
+            models.Index(fields=['detected_intent', 'detected_domain']),
+            models.Index(fields=['enhancement_level']),
+        ]
+
+    def __str__(self):
+        return f"[{self.enhancement_level}] {self.detected_intent} - {self.id}"
+
+
+class PromptTemplate(models.Model):
+    """Reusable prompt templates for specific scenarios."""
+    name = models.CharField(max_length=200)
+    intent = models.CharField(max_length=100, db_index=True)
+    domain = models.CharField(max_length=100, db_index=True)
+    template_body = models.TextField()
+    variables = models.JSONField(default=list)
+    usage_count = models.IntegerField(default=0)
+    avg_quality_improvement = models.FloatField(default=0.0)
+    is_active = models.BooleanField(default=True)
+
+    class Meta:
+        ordering = ['-avg_quality_improvement']
+        unique_together = ['intent', 'domain', 'name']
+
+    def __str__(self):
+        return f"{self.name} ({self.intent}/{self.domain})"

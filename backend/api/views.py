@@ -13,6 +13,11 @@ from django.views.decorators.csrf import csrf_exempt
 from django_ratelimit.decorators import ratelimit
 
 from .utils import sanitize_input, classify_prompt, score_prompt, MASTER_PROMPT, WELCOME_SYSTEM_PROMPT, DEEP_RESEARCH_PROMPT
+# Import from parent backend directory
+import sys
+import os
+sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+
 from services import (
     detect_intent, apply_smart_template,
     analyze_quality_heatmap,

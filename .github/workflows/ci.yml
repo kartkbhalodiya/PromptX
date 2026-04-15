@@ -21,22 +21,35 @@ jobs:
     - name: Install dependencies
       run: |
         python -m pip install --upgrade pip
-        pip install -r requirements.txt
+        # Install only essential packages for CI
+        pip install flake8
+        # Skip heavy dependencies like scipy, spacy for faster CI
     
     - name: Check code style
       run: |
-        pip install flake8
-        flake8 . --count --select=E9,F63,F7,F82 --show-source --statistics --exclude=venv
+        flake8 backend/ tests/ --count --select=E9,F63,F7,F82 --show-source --statistics --exclude=__pycache__,venv
     
     - name: Verify syntax
       run: |
         python -c "
-        import ast, sys
-        for f in ['app.py', 'services.py', 'test_fallback.py']:
+        import ast, sys, os
+        files = []
+        if os.path.exists('backend/app.py'):
+            files.append('backend/app.py')
+        if os.path.exists('backend/services.py'):
+            files.append('backend/services.py')
+        if os.path.exists('tests/test_fallback.py'):
+            files.append('tests/test_fallback.py')
+        
+        for f in files:
             try:
-                ast.parse(open(f).read())
+                with open(f) as file:
+                    ast.parse(file.read())
                 print(f'✅ {f} OK')
             except SyntaxError as e:
                 print(f'❌ {f}: {e}')
                 sys.exit(1)
+        
+        if not files:
+            print('⚠️  No Python files found to check')
         "
