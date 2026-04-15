@@ -334,6 +334,11 @@ body {
   box-shadow: 0 0 8px rgba(14, 165, 233, 0.8);
 }
 
+.kimi-dot {
+  background: #14b8a6;
+  box-shadow: 0 0 8px rgba(20, 184, 166, 0.8);
+}
+
 /* ===== MAIN CHAT AREA ===== */
 .chat-main {
   flex: 1;

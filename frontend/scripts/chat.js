@@ -102,7 +102,8 @@ function setupModelSelector() {
     mistral: 'Mistral',
     llama_405b: 'Llama 405B',
     glm: 'GLM 4.7',
-    deepseek: 'DeepSeek'
+    deepseek: 'DeepSeek',
+    kimi: 'Kimi'
   };
   
   modelBtns.forEach(btn => {

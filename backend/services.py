@@ -49,6 +49,7 @@ class AIModelFallback:
             {'name': 'llama_405b','priority': 5},
             {'name': 'glm','priority': 6},
             {'name': 'deepseek','priority': 7},
+            {'name': 'kimi','priority': 8},
         ]
     
     def generate(self, prompt, max_tokens=2000, preferred_model=None, api_key=None):
@@ -87,6 +88,8 @@ class AIModelFallback:
             return self._call_glm(prompt, max_tokens, api_key=api_key)
         elif model_name == 'deepseek':
             return self._call_deepseek(prompt, max_tokens, api_key=api_key)
+        elif model_name == 'kimi':
+            return self._call_kimi(prompt, max_tokens, api_key=api_key)
     
     def _call_gemini(self, prompt, api_key=None):
         key = api_key or os.getenv('GEMINI_API_KEY')
@@ -234,6 +237,36 @@ class AIModelFallback:
         msg = completion.choices[0].message
         content = msg.content or ""
         reasoning = getattr(msg, "reasoning_content", None)
+        if reasoning:
+            return f"> [!TIP]\n> **Thinking Process:**\n> {reasoning}\n\n{content}".strip()
+        return content.strip()
+
+    def _call_kimi(self, prompt, max_tokens, api_key=None):
+        key = api_key or os.getenv('KIMI_API_KEY')
+        if not key:
+            raise ValueError("KIMI_API_KEY not found")
+        
+        response = requests.post(
+            "https://integrate.api.nvidia.com/v1/chat/completions",
+            headers={
+                "Authorization": f"Bearer {key}",
+                "Accept": "application/json"
+            },
+            json={
+                "model": "moonshotai/kimi-k2.5",
+                "messages": self._split_prompt(prompt),
+                "max_tokens": min(max_tokens, 16384),
+                "temperature": 1.0,
+                "top_p": 1.0,
+                "stream": False,
+                "chat_template_kwargs": {"thinking": True}
+            },
+            timeout=80
+        )
+        response.raise_for_status()
+        msg = response.json()['choices'][0]['message']
+        content = msg.get('content', '')
+        reasoning = msg.get('reasoning_content')
         if reasoning:
             return f"> [!TIP]\n> **Thinking Process:**\n> {reasoning}\n\n{content}".strip()
         return content.strip()
