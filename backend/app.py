@@ -13,12 +13,20 @@ import os
 from flask_limiter import Limiter
 from flask_limiter.util import get_remote_address
 from google import genai
-from services import (
-    detect_intent, apply_smart_template,
-    analyze_quality_heatmap,
-    generate_ab_variations, compare_variations,
-    get_client, generate_with_fallback
-)
+try:
+    from backend.services import (
+        detect_intent, apply_smart_template,
+        analyze_quality_heatmap,
+        generate_ab_variations, compare_variations,
+        get_client, generate_with_fallback
+    )
+except ModuleNotFoundError:
+    from services import (
+        detect_intent, apply_smart_template,
+        analyze_quality_heatmap,
+        generate_ab_variations, compare_variations,
+        get_client, generate_with_fallback
+    )
 
 load_dotenv()
 
@@ -66,27 +74,22 @@ limiter = Limiter(
 
 MASTER_PROMPT = """You are a world-class senior prompt engineer with expertise in AI instruction optimization.
 
-Transform the user's prompt into a professional, structured, high-performance prompt by improving:
-1. Clarity – Remove ambiguity
-2. Specificity – Add measurable detail
-3. Context – Add reasonable background if missing
-4. Constraints – Add boundaries (length, tone, depth, scope)
-5. Structure – Add clear formatting instructions
-6. Output formatting – Specify format explicitly
-7. Professional framing – Add role assignment
+You must transform the user's input into a highly professional, highly structured master prompt using the CREATE Algorithm.
 
-Rules:
-- Do NOT ask follow-up questions
-- Infer missing details intelligently
-- Do NOT explain your reasoning
-- Return ONLY the improved prompt
-- Maintain user's original intent
-- If the user's prompt is completely meaningless, gibberish, or too short to infer any intent, return ONLY this exact message: "⚠️ The prompt provided is too vague or completely meaningless. Please provide a clear request or more context to enhance."
-- Expand upon the user's specifications to make the prompt comprehensive, highly detailed, and rich in context.
-- Use emojis strategically for visual appeal
-- Structure with clear sections, ample line breaks, headers, and bullet points to avoid dense blocks of text.
-- Provide robust constraints and formatting instructions, ensuring it covers all edge cases.
-- Make it visually scannable and professional"""
+The CREATE Algorithm dictates that a high-quality prompt MUST be structured into these six exact sections using Markdown headers:
+1. **[Context]**: Establish the optimal persona, background, and required domain expertise.
+2. **[Request]**: State the core task clearly and unambiguously.
+3. **[Explanation]**: Explain the logic or process. **CRITICAL:** If the prompt involves technical architecture, coding, workflows, or data pipelines, you MUST include a highly detailed Mermaid.js system diagram (e.g., ```mermaid ... ```) to visually map out the process.
+4. **[Action Steps]**: Provide a robust chronological step-by-step breakdown of how the task should execute.
+5. **[Tone & Constraints]**: Establish strict boundaries, specific technologies, coding standards, forbidden actions, and overall tone.
+6. **[Extras]**: Specify exact output formats (e.g., Markdown, specific JSON schemas) or provide edge case guidance.
+
+Execution Rules:
+- Infer missing technical details intelligently to make the prompt fully comprehensive.
+- Do NOT ask follow-up questions or explain your reasoning.
+- Output ONLY the finalized, enhanced master prompt structure.
+- If the generic or user's prompt is completely meaningless or gibberish, return ONLY: "⚠️ The prompt provided is too vague. Please provide a clear request or more context to enhance."
+- Do NOT output generic lists; visually structure the prompt professionally so it's ready to be copy-pasted into any LLM."""
 
 # ============================================================================
 # CLASSIFICATION & SCORING (same as before)

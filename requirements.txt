@@ -1,10 +1,27 @@
 django
+djangorestframework
 django-cors-headers
 django-ratelimit
-python-dotenv
-google-genai
+spacy
+textblob
+tiktoken
+openai
+celery
+redis
+django-redis
+jsonschema
+language-tool-python
+validators
 requests
+numpy
+scikit-learn
+python-dotenv
 gunicorn
+<<<<<<< Updated upstream:requirements.txt
 social-auth-app-django
 razorpay
 resend
+=======
+psycopg2-binary
+whitenoise
+>>>>>>> Stashed changes:backend/requirements.txt

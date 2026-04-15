@@ -39,6 +39,7 @@ def serve_frontend(request, path='index.html'):
 
 urlpatterns = [
     # API endpoints
+    path('api/v1/', include('enhancer.urls')),
     path('api/', include('api.urls')),
     path('health', include('api.urls_health')),
     
