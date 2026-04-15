@@ -44,20 +44,20 @@
         }
 
         .dashboard-header h1 {
-            font-family: var(--font-display);
-            font-size: 2.8rem;
-            letter-spacing: 0.15em;
-            color: var(--primary);
+            font-family: var(--font-body);
+            font-size: 2.4rem;
+            font-weight: 800;
+            letter-spacing: -0.02em;
+            color: var(--text-primary);
             margin: 0;
-            text-shadow: 0 0 20px var(--primary-glow);
         }
 
         .dashboard-header p {
-            font-family: var(--font-mono);
-            color: var(--text-muted);
-            margin-top: 1rem;
-            letter-spacing: 0.12em;
-            font-size: 0.85rem;
+            font-family: var(--font-body);
+            color: var(--text-secondary);
+            margin-top: 0.75rem;
+            font-size: 1rem;
+            letter-spacing: 0;
         }
 
         .options-container {
@@ -99,20 +99,6 @@
             opacity: 1;
         }
 
-        .module-badge {
-            position: absolute;
-            top: 20px;
-            right: 20px;
-            font-family: var(--font-mono);
-            font-size: 10px;
-            background: rgba(0, 255, 65, 0.1);
-            color: var(--primary);
-            padding: 4px 10px;
-            border: 1px solid rgba(0, 255, 65, 0.2);
-            border-radius: 4px;
-            letter-spacing: 1px;
-        }
-
         .module-icon {
             font-size: 2.5rem;
             color: var(--primary);
@@ -127,18 +113,19 @@
         }
 
         .module-content h2 {
-            font-family: var(--font-display);
-            font-size: 1.6rem;
+            font-family: var(--font-body);
+            font-size: 1.4rem;
+            font-weight: 700;
             color: #fff;
-            margin: 0 0 1rem 0;
-            letter-spacing: 0.05em;
+            margin: 0 0 0.75rem 0;
+            letter-spacing: -0.01em;
         }
 
         .module-content p {
-            color: var(--text-muted);
+            color: var(--text-secondary);
             line-height: 1.7;
-            margin-bottom: 2rem;
-            font-size: 0.9rem;
+            margin-bottom: 1.75rem;
+            font-size: 0.92rem;
             min-height: 4.5rem;
         }
 
@@ -150,17 +137,19 @@
 
         .feature-bullets li {
             display: flex;
-            align-items: center;
-            gap: 12px;
+            align-items: flex-start;
+            gap: 10px;
             color: var(--text-secondary);
-            font-size: 0.85rem;
-            margin-bottom: 0.8rem;
-            font-family: var(--font-mono);
+            font-size: 0.88rem;
+            margin-bottom: 0.75rem;
+            font-family: var(--font-body);
+            line-height: 1.5;
         }
 
         .feature-bullets li svg {
             color: var(--primary);
             flex-shrink: 0;
+            margin-top: 3px;
         }
 
         .module-action {
@@ -168,38 +157,41 @@
             padding-top: 2rem;
             display: flex;
             align-items: center;
-            gap: 10px;
-            font-family: var(--font-display);
-            font-size: 0.8rem;
+            gap: 8px;
+            font-family: var(--font-body);
+            font-size: 0.88rem;
+            font-weight: 600;
             color: var(--primary);
-            letter-spacing: 0.1em;
-            text-transform: uppercase;
         }
 
         .module-action span {
             transition: transform 0.3s;
+            font-size: 1rem;
         }
 
         .module-card:hover .module-action span {
-            transform: translateX(8px);
+            transform: translateX(6px);
         }
 
-        /* Status UI */
-        .system-status {
-            position: fixed;
-            bottom: 2rem;
-            left: 2rem;
-            font-family: var(--font-mono);
-            font-size: 10px;
-            color: var(--text-muted);
-            opacity: 0.6;
-            z-index: 1000;
+        .module-badge {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            font-family: var(--font-body);
+            font-size: 11px;
+            font-weight: 600;
+            background: rgba(0, 255, 65, 0.1);
+            color: var(--primary);
+            padding: 4px 10px;
+            border: 1px solid rgba(0, 255, 65, 0.2);
+            border-radius: 20px;
+            letter-spacing: 0.02em;
         }
 
         @media (max-width: 850px) {
             .options-container { grid-template-columns: 1fr; }
             .choose-main { padding-top: 100px; }
-            .dashboard-header h1 { font-size: 2rem; }
+            .dashboard-header h1 { font-size: 1.8rem; }
         }
     </style>
 </head>
@@ -235,56 +227,86 @@
     <main class="choose-main">
         <div class="choose-wrapper">
             <div class="dashboard-header">
-                <h1>CONNECT_INTERFACE</h1>
-                <p>> SELECT PROTOCOL TO INITIALIZE SESSION</p>
+                <h1>What do you want to do?</h1>
+                <p>Pick a tool and get started — it only takes a second.</p>
             </div>
 
             <div class="options-container">
-                <!-- Option 1: AI Playground -->
+                <!-- Option 1: Prompt Enhancer -->
                 <div class="module-card" onclick="window.location.href='/chat.html'">
-                    <div class="module-badge">STABLE_V2.0</div>
+                    <div class="module-badge">Free</div>
                     <div class="module-icon">
                         <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path></svg>
                     </div>
                     <div class="module-content">
-                        <h2>NEURAL_ENGINE</h2>
-                        <p>Direct interface with Gemini and fallback architectures. Enhance prompts and analyze heatmap quality.</p>
+                        <h2>Enhance Text &amp; Prompts</h2>
+                        <p>Paste any prompt or piece of text and get a better, clearer version back instantly. Great for AI prompts, emails, or any writing.</p>
                         <ul class="feature-bullets">
-                            <li><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><polyline points="20 6 9 17 4 12"></polyline></svg> Prompt Optimization</li>
-                            <li><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><polyline points="20 6 9 17 4 12"></polyline></svg> Heatmap Analysis</li>
-                            <li><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><polyline points="20 6 9 17 4 12"></polyline></svg> Multi-Model Fallback</li>
+                            <li>
+                                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><polyline points="20 6 9 17 4 12"></polyline></svg>
+                                Rewrites your prompt to be clearer and more specific
+                            </li>
+                            <li>
+                                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><polyline points="20 6 9 17 4 12"></polyline></svg>
+                                Shows a quality score so you know how good your prompt is
+                            </li>
+                            <li>
+                                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><polyline points="20 6 9 17 4 12"></polyline></svg>
+                                Generates 3 different versions to compare (A/B testing)
+                            </li>
+                            <li>
+                                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><polyline points="20 6 9 17 4 12"></polyline></svg>
+                                Works with multiple AI models — switches automatically if one fails
+                            </li>
+                            <li>
+                                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><polyline points="20 6 9 17 4 12"></polyline></svg>
+                                Detects what kind of prompt you wrote (code, blog, business, etc.)
+                            </li>
                         </ul>
                     </div>
                     <div class="module-action">
-                        INITIALIZE_SESSION <span>&gt;&gt;</span>
+                        Open Prompt Enhancer <span>&rarr;</span>
                     </div>
                 </div>
 
-                <!-- Option 2: Full Stack Creator -->
+                <!-- Option 2: Full Stack App Builder -->
                 <div class="module-card" onclick="window.location.href='/pricing.html'">
-                    <div class="module-badge" style="color: #f1fa8c; border-color: rgba(241, 250, 140, 0.3);">PREMIUM_ONLY</div>
+                    <div class="module-badge" style="color: #f1fa8c; border-color: rgba(241, 250, 140, 0.3);">Premium</div>
                     <div class="module-icon" style="color: #f1fa8c; filter: drop-shadow(0 0 8px rgba(241, 250, 140, 0.4));">
                         <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="16 18 22 12 16 6"></polyline><polyline points="8 6 2 12 8 18"></polyline></svg>
                     </div>
                     <div class="module-content">
-                        <h2>APP_SYNTHESIZER</h2>
-                        <p>Convert prompt logic into fully functional web applications. React + Django architecture generation.</p>
+                        <h2>Full-Stack App Builder</h2>
+                        <p>Describe the app you want to build and get a complete, working codebase — frontend, backend, and database all set up for you.</p>
                         <ul class="feature-bullets">
-                            <li><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><polyline points="20 6 9 17 4 12"></polyline></svg> Codebase Generation</li>
-                            <li><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><polyline points="20 6 9 17 4 12"></polyline></svg> Database Scaffolding</li>
-                            <li><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><polyline points="20 6 9 17 4 12"></polyline></svg> Deployment Ready</li>
+                            <li>
+                                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><polyline points="20 6 9 17 4 12"></polyline></svg>
+                                Generates a full React + Django project from a single description
+                            </li>
+                            <li>
+                                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><polyline points="20 6 9 17 4 12"></polyline></svg>
+                                Sets up your database tables and models automatically
+                            </li>
+                            <li>
+                                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><polyline points="20 6 9 17 4 12"></polyline></svg>
+                                Includes user login and authentication out of the box
+                            </li>
+                            <li>
+                                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><polyline points="20 6 9 17 4 12"></polyline></svg>
+                                Builds REST API endpoints so your frontend and backend talk to each other
+                            </li>
+                            <li>
+                                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><polyline points="20 6 9 17 4 12"></polyline></svg>
+                                Ready to deploy — just push to Vercel or Railway and you're live
+                            </li>
                         </ul>
                     </div>
                     <div class="module-action" style="color: #f1fa8c;">
-                        UPGRADE_IDENTITY <span>&gt;&gt;</span>
+                        Upgrade to unlock <span>&rarr;</span>
                     </div>
                 </div>
             </div>
         </div>
     </main>
-
-    <div class="system-status">
-        [SYS]: KERNEL_OK // [NETWORK]: ENCRYPTED // [HOST]: 127.0.0.1
-    </div>
 </body>
 </html>

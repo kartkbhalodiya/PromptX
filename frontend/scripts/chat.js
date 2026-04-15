@@ -10,7 +10,7 @@ const API_BASE = (function() {
 })();
 
 let currentMode = 'enhance';
-let selectedModel = 'auto';
+let selectedModel = 'gemini';
 let currentChatId = null;
 let chatSessions = [];
 
@@ -80,11 +80,11 @@ function setupModes() {
 
 function updateModeDisplay() {
   const modeLabels = {
-    enhance: '[>_] Enhance Mode',
-    analyze: '[///] Analyze Mode',
-    compare: '[<>] Compare Mode'
+    enhance: 'Enhance Mode',
+    analyze: 'Analyze Mode',
+    compare: 'Compare Mode'
   };
-  const label = modeLabels[currentMode] || '[>_] Enhance Mode';
+  const label = modeLabels[currentMode] || 'Enhance Mode';
   
   document.getElementById('topbar-mode').textContent = label;
   document.getElementById('mode-indicator').textContent = label;
@@ -94,6 +94,11 @@ function updateModeDisplay() {
 function setupModelSelector() {
   const modelBtns = document.querySelectorAll('.model-option');
   const badge = document.getElementById('topbar-model-badge');
+
+  const modelLabels = {
+    gemini: 'Gemini 2.0',
+    groq: 'Groq'
+  };
   
   modelBtns.forEach(btn => {
     btn.addEventListener('click', () => {
@@ -101,10 +106,9 @@ function setupModelSelector() {
       btn.classList.add('active');
       selectedModel = btn.getAttribute('data-model');
       
-      // Update topbar badge
-      if (badge) badge.textContent = selectedModel.toUpperCase().replace('_', ' ');
+      if (badge) badge.textContent = modelLabels[selectedModel] || selectedModel;
       
-      showToast('[SYS] Model Changed', `Switched to ${btn.textContent.trim()}`, 'success');
+      showToast('Model changed', `Now using ${btn.textContent.trim()}`, 'success');
     });
   });
 }
@@ -268,24 +272,24 @@ function startNewChat() {
   container.innerHTML = `
     <div class="welcome-screen" id="welcome-screen">
       <img src="Public/bot-img.png" alt="PromptX" class="welcome-logo">
-      <h1>PROMPTX</h1>
-      <p>Transform your prompts with AI</p>
+      <h1>PromptX</h1>
+      <p>Pick a mode below, type your prompt, and hit send.</p>
       <div class="welcome-cards">
         <button class="welcome-card" data-action="enhance">
-          <div class="wc-icon">[&gt;_]</div>
-          <div class="wc-text"><strong>Enhance Prompt</strong><span>Make it professional and detailed</span></div>
+          <div class="wc-icon">✦</div>
+          <div class="wc-text"><strong>Enhance Prompt</strong><span>Rewrite it to be clearer and more detailed</span></div>
         </button>
         <button class="welcome-card" data-action="analyze">
-          <div class="wc-icon">[///]</div>
-          <div class="wc-text"><strong>Analyze Quality</strong><span>Get scores and improvement tips</span></div>
+          <div class="wc-icon">◈</div>
+          <div class="wc-text"><strong>Analyze Quality</strong><span>Get a score and tips to improve it</span></div>
         </button>
         <button class="welcome-card" data-action="compare">
-          <div class="wc-icon">[&lt;&gt;]</div>
-          <div class="wc-text"><strong>Compare Variations</strong><span>A/B test prompt variations</span></div>
+          <div class="wc-icon">⇄</div>
+          <div class="wc-text"><strong>Compare Versions</strong><span>See 3 different rewrites side by side</span></div>
         </button>
       </div>
       <div class="welcome-examples">
-        <div class="sidebar-label" style="margin-bottom: 0.75rem;">TRY THESE:</div>
+        <div class="examples-label">Try an example:</div>
         <button class="example-chip" onclick="fillPrompt('Write a blog post about artificial intelligence')">Write a blog about AI</button>
         <button class="example-chip" onclick="fillPrompt('Create a Python function to sort a list of dictionaries by key')">Sort list of dicts in Python</button>
         <button class="example-chip" onclick="fillPrompt('Design a marketing strategy for a SaaS product launch')">SaaS marketing strategy</button>
@@ -350,6 +354,101 @@ async function handleEnhance(prompt) {
     loadingMsg.remove();
     
     if (result.success) {
+      // Welcome / greeting response — render as plain chat bubble
+      if (result.type === 'welcome') {
+        const html = `<div class="welcome-reply">${renderMarkdown(result.enhanced)}</div>`;
+        addAssistantMessage(html);
+        saveMsgToSession('assistant', html);
+        return;
+      }
+
+      // URL analysis response
+      if (result.type === 'url_analysis') {
+        const pagesScraped = result.pages_scraped || 0;
+        const totalChars = result.total_chars || result.char_count || 0;
+        const pagesList = (result.pages || []).map(p =>
+          `<a href="${escapeHtml(p.url)}" target="_blank" rel="noopener" style="display:block;font-size:0.72rem;color:var(--accent);text-decoration:none;padding:0.15rem 0;font-family:var(--font-mono);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;" title="${escapeHtml(p.url)}">↗ ${escapeHtml(p.title || p.url)}</a>`
+        ).join('');
+
+        const scrapeNote = result.scrape_error
+          ? `<span style="color:var(--warning);font-size:0.72rem;">⚠️ Could not scrape — analysis from web search only</span>`
+          : `<span style="font-size:0.72rem;color:var(--text-muted);">📄 ${pagesScraped} pages · ${totalChars.toLocaleString()} chars extracted</span>`;
+
+        const html = `
+          <div class="analysis-card">
+            <div style="display:flex;align-items:center;gap:0.6rem;margin-bottom:0.85rem;flex-wrap:wrap;">
+              <span style="font-size:0.75rem;font-weight:700;color:var(--accent);background:rgba(0,229,255,0.1);padding:0.25rem 0.75rem;border-radius:100px;border:1px solid rgba(0,229,255,0.3);">
+                🌐 Deep Website Analysis
+              </span>
+              <span style="font-size:0.72rem;color:var(--text-secondary);background:var(--primary-light);padding:0.2rem 0.65rem;border-radius:100px;border:1px solid var(--border);font-family:var(--font-mono);">
+                ${result.model.toUpperCase()}
+              </span>
+            </div>
+            <div style="background:rgba(0,0,0,0.25);padding:0.75rem 1rem;border-radius:8px;margin-bottom:0.85rem;border:1px solid var(--border);">
+              <div style="font-size:0.85rem;font-weight:600;color:var(--text-primary);margin-bottom:0.3rem;">${escapeHtml(result.page_title || result.site_title || result.url)}</div>
+              <a href="${escapeHtml(result.url)}" target="_blank" rel="noopener" style="font-size:0.72rem;color:var(--accent);text-decoration:none;font-family:var(--font-mono);">${escapeHtml(result.url)}</a>
+              <div style="margin-top:0.4rem;">${scrapeNote}</div>
+              ${pagesList ? `
+              <details style="margin-top:0.5rem;">
+                <summary style="cursor:pointer;font-size:0.72rem;color:var(--text-muted);">Pages crawled (${pagesScraped})</summary>
+                <div style="margin-top:0.35rem;padding-left:0.5rem;">${pagesList}</div>
+              </details>` : ''}
+            </div>
+            <div style="line-height:1.8;">${renderMarkdown(result.enhanced)}</div>
+            <div class="message-actions" style="margin-top:1rem;">
+              <button onclick="copyText(decodeURIComponent('${encodeURIComponent(result.enhanced).replace(/'/g, '%27')}'))">
+                <i data-lucide="copy"></i> Copy Analysis
+              </button>
+              <a href="${escapeHtml(result.url)}" target="_blank" rel="noopener" style="display:inline-flex;align-items:center;gap:0.35rem;padding:0.35rem 0.75rem;background:transparent;border:1px solid var(--border);border-radius:6px;color:var(--text-secondary);font-size:0.75rem;text-decoration:none;">
+                <i data-lucide="external-link"></i> Visit Site
+              </a>
+            </div>
+          </div>
+        `;
+        addAssistantMessage(html);
+        saveMsgToSession('assistant', html);
+        try { if (typeof lucide !== 'undefined') lucide.createIcons(); } catch(e) {}
+        return;
+      }
+        const html = `
+          <div class="analysis-card">
+            <div style="display:flex;align-items:center;gap:0.6rem;margin-bottom:1rem;flex-wrap:wrap;">
+              <span style="font-size:0.75rem;font-weight:700;color:#f97316;background:rgba(249,115,22,0.1);padding:0.25rem 0.75rem;border-radius:100px;border:1px solid rgba(249,115,22,0.3);">
+                🔬 Deep Research Mode
+              </span>
+              <span style="font-size:0.72rem;color:var(--text-secondary);background:var(--primary-light);padding:0.2rem 0.65rem;border-radius:100px;border:1px solid var(--border);font-family:var(--font-mono);">
+                ${result.model.toUpperCase()}
+              </span>
+              <span style="font-size:0.72rem;color:var(--text-secondary);background:var(--primary-light);padding:0.2rem 0.65rem;border-radius:100px;border:1px solid var(--border);font-family:var(--font-mono);">
+                ${result.classification.category.toUpperCase()}
+              </span>
+            </div>
+            ${result.analysis ? `
+            <details style="margin-bottom:1rem;">
+              <summary style="cursor:pointer;font-size:0.78rem;color:var(--text-muted);font-family:var(--font-mono);padding:0.5rem;background:rgba(0,0,0,0.2);border-radius:6px;border:1px solid var(--border);">
+                📋 Request Analysis (click to expand)
+              </summary>
+              <div style="padding:0.75rem;background:rgba(0,0,0,0.15);border-radius:0 0 6px 6px;font-size:0.82rem;color:var(--text-secondary);line-height:1.6;border:1px solid var(--border);border-top:none;">
+                ${renderMarkdown(result.analysis)}
+              </div>
+            </details>` : ''}
+            <div style="line-height:1.8;">
+              ${renderMarkdown(result.enhanced)}
+            </div>
+            <div class="message-actions" style="margin-top:1rem;">
+              <button onclick="copyText(decodeURIComponent('${encodeURIComponent(result.enhanced).replace(/'/g, '%27')}'))">
+                <i data-lucide="copy"></i> Copy Full Answer
+              </button>
+            </div>
+          </div>
+        `;
+        addAssistantMessage(html);
+        saveMsgToSession('assistant', html);
+        try { if (typeof lucide !== 'undefined') lucide.createIcons(); } catch(e) {}
+        return;
+      }
+
+      // Standard enhancement response
       const html = `
         <div class="analysis-card">
           <h3 style="margin-bottom:1rem;color:var(--primary);font-family:var(--font-mono);font-size:0.9rem;">[&gt;_] Enhanced Prompt</h3>
@@ -358,10 +457,13 @@ async function handleEnhance(prompt) {
           </div>
           <div style="display:flex;gap:0.5rem;align-items:center;margin-bottom:0.85rem;flex-wrap:wrap;">
             <span style="font-size:0.72rem;color:var(--text-secondary);background:var(--primary-light);padding:0.2rem 0.65rem;border-radius:100px;border:1px solid var(--border);font-family:var(--font-mono);">
-              MODEL: ${result.model.toUpperCase()}
+              ${result.model.toUpperCase()}
+            </span>
+            <span style="font-size:0.72rem;color:var(--text-secondary);background:var(--primary-light);padding:0.2rem 0.65rem;border-radius:100px;border:1px solid var(--border);font-family:var(--font-mono);">
+              ${result.classification.category.toUpperCase()}
             </span>
             <span style="font-size:0.72rem;color:var(--primary);background:var(--primary-light);padding:0.2rem 0.65rem;border-radius:100px;border:1px solid var(--border);font-family:var(--font-mono);">
-              +${result.improvement} quality pts
+              ${result.original_score.quality} → ${result.enhanced_score.quality} (+${result.improvement} pts)
             </span>
           </div>
           <div class="message-actions">
@@ -374,13 +476,13 @@ async function handleEnhance(prompt) {
       addAssistantMessage(html);
       saveMsgToSession('assistant', html);
     } else {
-      const errHtml = `<div style="color:var(--error);padding:0.75rem;font-family:var(--font-mono);font-size:0.85rem;">[ERR] ${escapeHtml(result.error || 'Enhancement failed')}</div>`;
+      const errHtml = `<div class="error-msg">[ERR] ${escapeHtml(result.error || 'Enhancement failed')}</div>`;
       addAssistantMessage(errHtml);
       saveMsgToSession('assistant', errHtml);
     }
   } catch (error) {
     loadingMsg.remove();
-    const errHtml = `<div style="color:var(--error);padding:0.75rem;font-family:var(--font-mono);font-size:0.85rem;">[ERR] Connection failed — is the server running at ${API_BASE}?</div>`;
+    const errHtml = `<div class="error-msg">Connection failed — is the server running at ${API_BASE}?</div>`;
     addAssistantMessage(errHtml);
     saveMsgToSession('assistant', errHtml);
   }

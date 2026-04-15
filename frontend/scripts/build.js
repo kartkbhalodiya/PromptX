@@ -65,11 +65,8 @@ function selectModel(model) {
     btn.classList.toggle('active', btn.dataset.model === model);
   });
   const modelNames = {
-    'auto': 'Auto',
     'gemini': 'Gemini 2.0',
-    'nvidia_mistral': 'NVIDIA Mistral',
-    'nvidia_qwen': 'NVIDIA Qwen',
-    'huggingface': 'HuggingFace'
+    'groq':   'Groq'
   };
   modelBadge.textContent = modelNames[model] || 'Auto';
 }

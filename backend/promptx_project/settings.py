@@ -87,7 +87,7 @@ MIDDLEWARE = [
     'django.contrib.auth.middleware.AuthenticationMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
-    'enhancer.middleware.RequestLoggingMiddleware',
+    'api.middleware.APIKeyMiddleware',
 ]
 
 ROOT_URLCONF = 'promptx_project.urls'
@@ -133,7 +133,8 @@ DATABASES = {
     }
 }
 
-# Cache
+# Cache — required by django-ratelimit
+
 CACHES = {
     'default': {
         'BACKEND': 'django.core.cache.backends.locmem.LocMemCache',
@@ -141,6 +142,10 @@ CACHES = {
         'TIMEOUT': 3600,
     }
 }
+
+# Default primary key field type
+DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
+
 
 # REST Framework
 REST_FRAMEWORK = {
@@ -214,6 +219,7 @@ AUTH_PASSWORD_VALIDATORS = [
     {'NAME': 'django.contrib.auth.password_validation.CommonPasswordValidator'},
     {'NAME': 'django.contrib.auth.password_validation.NumericPasswordValidator'},
 ]
+>>>>>>> upstream/main
 
 # Logging
 LOGGING = {
@@ -245,5 +251,9 @@ LOGGING = {
     },
 }
 
+# Static files
+STATIC_ROOT = BASE_DIR / 'staticfiles'
+STATIC_URL = '/static/'
+
 # Server port
-PORT = int(os.getenv('PORT', 5000))
+PORT = int(os.getenv('PORT', 8000))

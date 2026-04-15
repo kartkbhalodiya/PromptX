@@ -2,8 +2,8 @@
   "version": 2,
   "builds": [
     {
-      "src": "app.py",
-      "use": "@vercel/python"
+      "src": "manage.py",
+      "use": "@vercel/django"
     },
     {
       "src": "frontend/**",
@@ -13,11 +13,15 @@
   "routes": [
     {
       "src": "/api/(.*)",
-      "dest": "app.py"
+      "dest": "manage.py"
     },
     {
       "src": "/health",
-      "dest": "app.py"
+      "dest": "manage.py"
+    },
+    {
+      "src": "/auth/(.*)",
+      "dest": "manage.py"
     },
     {
       "src": "/(.*\\.(css|js|gif|svg|png|jpg|jpeg|ico|webmanifest))",

@@ -24,6 +24,8 @@ urlpatterns = [
     path('detect-intent', views.detect_intent_view, name='detect-intent'),
     path('quality-heatmap', views.quality_heatmap_view, name='quality-heatmap'),
     path('ab-test', views.ab_test_view, name='ab-test'),
+    path('analyze-url', views.analyze_url_view, name='analyze-url'),
+    path('web-search', views.web_search_view, name='web-search'),
     path('quick-login/', quick_login, name='quick-login'),
     
     # Auth endpoints
