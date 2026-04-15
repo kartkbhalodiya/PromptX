@@ -282,7 +282,7 @@ def enhance_view(request):
             return JsonResponse({'error': f'Prompt too long: {len(prompt)} chars'}, status=400)
 
         preferred_model = data.get('model')
-        model_arg = preferred_model if preferred_model in ('gemini', 'groq', 'nvidia', 'mistral', 'llama_405b') else None
+        model_arg = preferred_model if preferred_model in ('gemini', 'groq', 'nvidia', 'mistral', 'llama_405b', 'glm') else None
         
         # User-provided API Key from headers
         api_key = request.headers.get('X-API-Key')
@@ -650,7 +650,7 @@ def analyze_url_view(request):
 
         question = sanitize_input(data.get('question', '').strip()) or \
                    'Give a complete deep analysis of this website.'
-        model_arg = data.get('model') if data.get('model') in ('gemini', 'groq', 'nvidia', 'mistral', 'llama_405b') else None
+        model_arg = data.get('model') if data.get('model') in ('gemini', 'groq', 'nvidia', 'mistral', 'llama_405b', 'glm') else None
         api_key = request.headers.get('X-API-Key')
 
         from urllib.parse import urlparse
@@ -756,7 +756,7 @@ def web_search_view(request):
         if not query:
             return JsonResponse({'error': 'Search query is required'}, status=400)
 
-        model_arg = data.get('model') if data.get('model') in ('gemini', 'groq', 'nvidia', 'mistral', 'llama_405b') else None
+        model_arg = data.get('model') if data.get('model') in ('gemini', 'groq', 'nvidia', 'mistral', 'llama_405b', 'glm') else None
         api_key = request.headers.get('X-API-Key')
 
         logger.info(f"Web search: {query}")

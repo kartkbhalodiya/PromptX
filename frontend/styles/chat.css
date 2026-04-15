@@ -324,6 +324,11 @@ body {
   box-shadow: 0 0 8px rgba(255, 49, 49, 0.8);
 }
 
+.glm-dot {
+  background: #fbbf24;
+  box-shadow: 0 0 8px rgba(251, 191, 36, 0.8);
+}
+
 /* ===== MAIN CHAT AREA ===== */
 .chat-main {
   flex: 1;

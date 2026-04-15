@@ -100,7 +100,8 @@ function setupModelSelector() {
     groq: 'Groq',
     nvidia: 'NVIDIA',
     mistral: 'Mistral',
-    llama_405b: 'Llama 405B'
+    llama_405b: 'Llama 405B',
+    glm: 'GLM 4.7'
   };
   
   modelBtns.forEach(btn => {
