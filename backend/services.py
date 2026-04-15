@@ -51,6 +51,7 @@ class AIModelFallback:
             {'name': 'deepseek','priority': 7},
             {'name': 'kimi','priority': 8},
             {'name': 'kimi_think','priority': 9},
+            {'name': 'gpt_oss','priority': 10},
         ]
     
     def generate(self, prompt, max_tokens=2000, preferred_model=None, api_key=None):
@@ -93,6 +94,8 @@ class AIModelFallback:
             return self._call_kimi(prompt, max_tokens, api_key=api_key)
         elif model_name == 'kimi_think':
             return self._call_kimi_think(prompt, max_tokens, api_key=api_key)
+        elif model_name == 'gpt_oss':
+            return self._call_gpt_oss(prompt, max_tokens, api_key=api_key)
     
     def _call_gemini(self, prompt, api_key=None):
         key = api_key or os.getenv('GEMINI_API_KEY')
@@ -291,6 +294,32 @@ class AIModelFallback:
             temperature=1.0,
             top_p=0.9,
             max_tokens=min(max_tokens, 16384),
+            stream=False
+        )
+        msg = completion.choices[0].message
+        content = msg.content or ""
+        reasoning = getattr(msg, "reasoning_content", None)
+        if reasoning:
+            return f"> [!TIP]\n> **Thinking Process:**\n> {reasoning}\n\n{content}".strip()
+        return content.strip()
+
+    def _call_gpt_oss(self, prompt, max_tokens, api_key=None):
+        key = api_key or os.getenv('GPT_OSS_API_KEY')
+        if not key:
+            raise ValueError("GPT_OSS_API_KEY not found")
+        
+        from openai import OpenAI
+        client = OpenAI(
+            base_url="https://integrate.api.nvidia.com/v1",
+            api_key=key
+        )
+
+        completion = client.chat.completions.create(
+            model="openai/gpt-oss-120b",
+            messages=self._split_prompt(prompt),
+            temperature=1.0,
+            top_p=1.0,
+            max_tokens=min(max_tokens, 4096),
             stream=False
         )
         msg = completion.choices[0].message

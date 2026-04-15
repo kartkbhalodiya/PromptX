@@ -104,7 +104,8 @@ function setupModelSelector() {
     glm: 'GLM 4.7',
     deepseek: 'DeepSeek',
     kimi: 'Kimi',
-    kimi_think: 'Kimi'
+    kimi_think: 'Kimi',
+    gpt_oss: 'GPT OSS'
   };
   
   modelBtns.forEach(btn => {

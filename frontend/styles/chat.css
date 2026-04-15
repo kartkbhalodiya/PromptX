@@ -344,6 +344,11 @@ body {
   box-shadow: 0 0 8px rgba(45, 212, 191, 0.8);
 }
 
+.gpt-oss-dot {
+  background: #e2e8f0;
+  box-shadow: 0 0 8px rgba(226, 232, 240, 0.8);
+}
+
 /* ===== MAIN CHAT AREA ===== */
 .chat-main {
   flex: 1;
