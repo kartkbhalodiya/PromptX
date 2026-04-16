@@ -2,20 +2,25 @@
    PromptX Chat Page — JavaScript
    ============================ */
 
-// Auto-detect API URL based on where the page is served from
-const API_BASE = (function() {
-  const loc = window.location;
-  if (loc.protocol === 'file:') return 'http://127.0.0.1:8000/api';
-  return `${loc.protocol}//${loc.hostname}:${loc.port || (loc.protocol === 'https:' ? '443' : '80')}/api`;
-})();
+// Force API URL to always use localhost:8000
+if (typeof window.API_BASE === 'undefined') {
+  window.API_BASE = 'http://127.0.0.1:8000/api';
+}
+const API_BASE = window.API_BASE;
+
+console.log('=== API Configuration ===');
+console.log('API_BASE:', API_BASE);
+console.log('Current location:', window.location.href);
 
 let currentMode = 'enhance';
-let selectedModel = 'gemini';
+let selectedModel = 'auto';
 let currentChatId = null;
 let chatSessions = [];
 
 // ===== INIT =====
 document.addEventListener('DOMContentLoaded', () => {
+  console.log('=== PromptX Chat Initializing ===');
+  
   try { if (typeof lucide !== 'undefined') lucide.createIcons(); } catch(e) {}
   
   loadChatSessions();
@@ -23,7 +28,6 @@ document.addEventListener('DOMContentLoaded', () => {
   setupModes();
   setupModelSelector();
   setupChatInput();
-  setupWelcomeCards();
   
   // Restore API key
   const apiInput = document.getElementById('api-key-input');
@@ -31,6 +35,18 @@ document.addEventListener('DOMContentLoaded', () => {
     apiInput.value = localStorage.getItem('promptx_api_key') || '';
     apiInput.addEventListener('input', (e) => localStorage.setItem('promptx_api_key', e.target.value));
   }
+  
+  // Setup welcome cards immediately
+  console.log('Setting up welcome cards on page load...');
+  setupWelcomeCards();
+  
+  // Restore last active chat on refresh
+  restoreLastChat();
+  
+  // Initial render check for diagrams
+  renderAllD2();
+  
+  console.log('=== Initialization Complete ===');
 });
 
 // ===== SIDEBAR =====
@@ -39,6 +55,7 @@ function setupSidebar() {
   const toggle = document.getElementById('sidebar-toggle');
   const closeBtn = document.getElementById('sidebar-close');
   const newChatBtn = document.getElementById('new-chat-btn');
+  const clearHistoryBtn = document.getElementById('clear-history-btn');
   
   toggle.addEventListener('click', () => {
     sidebar.classList.toggle('collapsed');
@@ -51,6 +68,30 @@ function setupSidebar() {
   newChatBtn.addEventListener('click', () => {
     startNewChat();
   });
+  
+  // Clear history button
+  if (clearHistoryBtn) {
+    clearHistoryBtn.addEventListener('click', (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+      console.log('Clear button clicked');
+      if (confirm('Clear all chat history? This cannot be undone.')) {
+        // Clear all data
+        chatSessions = [];
+        currentChatId = null;
+        localStorage.removeItem('promptx_sessions');
+        localStorage.removeItem('promptx_current_chat');
+        
+        // Update UI
+        renderHistory();
+        startNewChat();
+        showToast('History Cleared', 'All chat sessions have been deleted', 'success');
+      }
+    });
+    console.log('Clear history button listener attached');
+  } else {
+    console.warn('Clear history button not found - ID: clear-history-btn');
+  }
   
   // Check localStorage for sidebar state
   const sidebarState = localStorage.getItem('sidebarCollapsed');
@@ -93,21 +134,37 @@ function updateModeDisplay() {
 // ===== MODEL SELECTOR =====
 function setupModelSelector() {
   const modelBtns = document.querySelectorAll('.model-option');
+  const dropdown = document.getElementById('model-dropdown');
   const badge = document.getElementById('topbar-model-badge');
 
   const modelLabels = {
-    gemini: 'Gemini 2.0',
-    groq: 'Groq',
-    nvidia: 'NVIDIA',
-    mistral: 'Mistral',
-    llama_405b: 'Llama 405B',
-    glm: 'GLM 4.7',
-    deepseek: 'DeepSeek',
-    kimi: 'Kimi',
-    kimi_think: 'Kimi',
-    gpt_oss: 'GPT OSS'
+    auto: 'Auto',
+    gemini_flash: 'Gemini 2.0 Flash',
+    gemini_flash_8b: 'Gemini 2.0 Flash Lite',
+    gemini_pro: 'Gemini 2.5 Pro',
+    nvidia_minimax: 'NVIDIA Minimax',
+    groq: 'Groq'
   };
   
+  // Handle dropdown change
+  if (dropdown) {
+    dropdown.addEventListener('change', (e) => {
+      selectedModel = e.target.value;
+      console.log('=== MODEL CHANGED ===');
+      console.log('Selected model:', selectedModel);
+      
+      if (badge) badge.textContent = modelLabels[selectedModel] || selectedModel;
+      
+      showToast('Model changed', `Now using ${modelLabels[selectedModel]}`, 'success');
+    });
+    
+    // Set initial value
+    selectedModel = dropdown.value || 'auto';
+    console.log('=== INITIAL MODEL ===');
+    console.log('Initial model:', selectedModel);
+  }
+  
+  // Handle button clicks (if buttons exist)
   modelBtns.forEach(btn => {
     btn.addEventListener('click', () => {
       modelBtns.forEach(b => b.classList.remove('active'));
@@ -123,39 +180,125 @@ function setupModelSelector() {
 
 // ===== WELCOME CARDS & EXAMPLES =====
 function setupWelcomeCards() {
-  document.querySelectorAll('.welcome-card').forEach(card => {
-    card.addEventListener('click', () => {
-      const action = card.getAttribute('data-action');
+  console.log('=== setupWelcomeCards called ===');
+  
+  const cards = document.querySelectorAll('.welcome-card');
+  console.log(`Found ${cards.length} welcome cards`);
+  
+  if (cards.length === 0) {
+    console.error('No welcome cards found! Check if welcome-screen exists in DOM');
+    const welcomeScreen = document.getElementById('welcome-screen');
+    console.log('Welcome screen element:', welcomeScreen);
+    return;
+  }
+  
+  cards.forEach((card, index) => {
+    console.log(`Setting up card ${index}:`, card);
+    
+    card.addEventListener('click', function(e) {
+      e.preventDefault();
+      e.stopPropagation();
+      console.log(`=== Card ${index} CLICKED ===`);
+      
+      const action = this.getAttribute('data-action');
+      console.log(`Action: ${action}`);
+      
       // Switch mode
       document.querySelectorAll('.mode-item').forEach(m => {
         m.classList.remove('active');
-        if (m.getAttribute('data-mode') === action) m.classList.add('active');
+        if (m.getAttribute('data-mode') === action) {
+          m.classList.add('active');
+          console.log(`Activated mode: ${action}`);
+        }
       });
       currentMode = action;
       updateModeDisplay();
-      document.getElementById('chat-input').focus();
+      
+      // Focus input but DON'T hide welcome screen
+      const input = document.getElementById('chat-input');
+      if (input) {
+        console.log('Focusing input...');
+        input.focus();
+        setTimeout(() => {
+          input.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        }, 100);
+      } else {
+        console.error('Chat input not found!');
+      }
     });
   });
+  
+  // Setup example chips
+  const chips = document.querySelectorAll('.example-chip');
+  console.log(`Found ${chips.length} example chips`);
+  
+  chips.forEach((chip, index) => {
+    chip.addEventListener('click', function(e) {
+      e.preventDefault();
+      e.stopPropagation();
+      console.log(`=== Chip ${index} CLICKED ===`);
+      const text = this.textContent.trim();
+      console.log(`Text: ${text}`);
+      fillPrompt(text);
+    });
+  });
+  
+  console.log('=== setupWelcomeCards complete ===');
 }
 
 function fillPrompt(text) {
+  console.log('=== fillPrompt called ===');
+  console.log('Text:', text);
+  
   const input = document.getElementById('chat-input');
+  if (!input) {
+    console.error('Chat input not found!');
+    return;
+  }
+  
+  console.log('Setting input value...');
   input.value = text;
   input.dispatchEvent(new Event('input'));
   input.focus();
+  
+  console.log('Input value set to:', input.value);
+  
+  // Scroll to input
+  setTimeout(() => {
+    input.scrollIntoView({ behavior: 'smooth', block: 'center' });
+  }, 100);
 }
+
+// Make fillPrompt globally accessible for inline onclick handlers
+window.fillPrompt = fillPrompt;
+console.log('fillPrompt attached to window');
 
 // ===== CHAT INPUT =====
 function setupChatInput() {
+  console.log('=== setupChatInput called ===');
   const input = document.getElementById('chat-input');
   const sendBtn = document.getElementById('send-btn');
   const charCount = document.getElementById('char-count');
   
+  console.log('Input:', input);
+  console.log('Send button:', sendBtn);
+  
+  if (!input || !sendBtn) {
+    console.error('Chat input or send button not found');
+    return;
+  }
+  
+  console.log('Adding input listeners...');
+  
   input.addEventListener('input', () => {
     sendBtn.disabled = !input.value.trim();
+    
+    // Auto-resize textarea
     input.style.height = 'auto';
-    input.style.height = Math.min(input.scrollHeight, 150) + 'px';
-    charCount.textContent = `${input.value.length} chars`;
+    const newHeight = Math.min(Math.max(input.scrollHeight, 44), 120);
+    input.style.height = newHeight + 'px';
+    
+    if (charCount) charCount.textContent = `${input.value.length} chars`;
   });
   
   input.addEventListener('keydown', (e) => {
@@ -166,6 +309,8 @@ function setupChatInput() {
   });
   
   sendBtn.addEventListener('click', handleSend);
+  
+  console.log('setupChatInput complete');
 }
 
 async function handleSend() {
@@ -216,6 +361,38 @@ function loadChatSessions() {
 function saveChatSessions() {
   if (chatSessions.length > 30) chatSessions.length = 30;
   localStorage.setItem('promptx_sessions', JSON.stringify(chatSessions));
+  // Save current chat ID for restoration on refresh
+  if (currentChatId) {
+    localStorage.setItem('promptx_current_chat', currentChatId);
+  }
+}
+
+function restoreLastChat() {
+  console.log('=== restoreLastChat called ===');
+  const lastChatId = localStorage.getItem('promptx_current_chat');
+  console.log('Last chat ID:', lastChatId);
+  console.log('Chat sessions:', chatSessions.length);
+  
+  // Only restore if there's a valid saved chat with messages
+  if (lastChatId && chatSessions.length > 0) {
+    const session = chatSessions.find(s => s.id === lastChatId);
+    console.log('Found session:', session);
+    
+    if (session && session.messages && session.messages.length > 0) {
+      console.log('Loading session with', session.messages.length, 'messages');
+      loadSession(lastChatId);
+      return;
+    }
+  }
+  
+  // Otherwise, ensure welcome screen is visible and functional
+  console.log('No valid session, showing welcome screen');
+  const welcomeScreen = document.getElementById('welcome-screen');
+  if (welcomeScreen) {
+    console.log('Welcome screen found, already set up');
+  } else {
+    console.error('Welcome screen NOT found in DOM!');
+  }
 }
 
 function saveMsgToSession(role, content) {
@@ -276,6 +453,7 @@ function loadSession(sessionId) {
 
 function startNewChat() {
   currentChatId = null;
+  localStorage.removeItem('promptx_current_chat'); // Clear saved chat ID
   const container = document.getElementById('chat-messages');
   container.innerHTML = `
     <div class="welcome-screen" id="welcome-screen">
@@ -376,58 +554,87 @@ function getFaviconUrl(url) {
 }
 
 // ===== THINKING PROGRESS UI =====
-function addThinkingMessage(steps) {
+function addThinkingMessage(steps, previewText = '') {
   const container = document.getElementById('chat-messages');
   const div = document.createElement('div');
+  const uniqueId = `thinking-${Date.now()}`;
   div.className = 'message assistant thinking-msg';
   div.innerHTML = `
-    <div class="message-avatar"><img src="Public/bot-img.png" alt="AI" style="width:100%;height:100%;object-fit:cover;border-radius:10px;"></div>
+    <div class="message-avatar" style="background:#ffffff;border:1px solid rgba(255,102,0,0.3);display:flex;align-items:center;justify-content:center;box-shadow:0 2px 8px rgba(255,102,0,0.15);">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#ff6600" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M12 2a10 10 0 1 0 10 10 4 4 0 0 1-5-5 4 4 0 0 1-5-5"></path>
+        <path d="M8.5 8.5v.01"></path>
+        <path d="M15.5 8.5v.01"></path>
+        <path d="M12 12v.01"></path>
+      </svg>
+    </div>
     <div class="message-content thinking-content">
-      <div class="thinking-header">
-        <div class="thinking-spinner"></div>
-        <span class="thinking-title">Analyzing...</span>
-      </div>
-      <div class="thinking-steps" id="thinking-steps-${div.id || Date.now()}">
-        ${steps.map((s, i) => `
-          <div class="thinking-step" data-step="${i}">
-            <span class="step-icon">○</span>
-            <span class="step-text">${s}</span>
-          </div>
-        `).join('')}
-      </div>
+      <details class="thinking-details" open>
+        <summary class="thinking-header">
+          <div class="thinking-spinner"></div>
+          <span class="thinking-title" id="${uniqueId}-title">Analyzing...</span>
+          <span class="thinking-toggle-icon">▾</span>
+        </summary>
+        <div class="thinking-steps" id="${uniqueId}-steps">
+          ${steps.map((s, i) => `
+            <div class="thinking-step" data-step="${i}">
+              <span class="step-icon">○</span>
+              <span class="step-text">${s}</span>
+            </div>
+          `).join('')}
+        </div>
+        ${previewText ? `
+        <div class="thinking-preview" id="${uniqueId}-preview">
+          <div class="thinking-preview-label">Real-time View</div>
+          <div id="${uniqueId}-preview-text">${previewText}</div>
+        </div>` : ''}
+      </details>
     </div>
   `;
   container.appendChild(div);
   container.scrollTop = container.scrollHeight;
 
-  // Give the steps div a stable ID
-  const stepsEl = div.querySelector('.thinking-steps');
-  stepsEl.id = `ts-${Date.now()}`;
-  div._stepsId = stepsEl.id;
-
+  div._stepsId = `${uniqueId}-steps`;
+  div._previewId = `${uniqueId}-preview-text`;
+  div._titleId = `${uniqueId}-title`;
+  
   return div;
 }
 
-function activateThinkingStep(thinkingDiv, stepIndex, status = 'active') {
+function activateThinkingStep(thinkingDiv, stepIndex, status = 'active', previewText = '') {
   // status: 'active' | 'done' | 'error'
   const steps = thinkingDiv.querySelectorAll('.thinking-step');
   steps.forEach((s, i) => {
+    s.classList.remove('active', 'done', 'error');
     if (i < stepIndex) {
       s.querySelector('.step-icon').textContent = '✓';
-      s.classList.remove('active', 'error');
       s.classList.add('done');
     } else if (i === stepIndex) {
       s.querySelector('.step-icon').textContent = status === 'error' ? '✗' : '◉';
-      s.classList.remove('done', 'error');
       s.classList.add(status === 'error' ? 'error' : 'active');
+    } else {
+      s.querySelector('.step-icon').textContent = '○';
     }
   });
+  
+  // Update title
   const titleEl = thinkingDiv.querySelector('.thinking-title');
-  if (titleEl) {
-    const texts = thinkingDiv.querySelectorAll('.thinking-step .step-text');
-    if (texts[stepIndex]) titleEl.textContent = texts[stepIndex].textContent;
+  if (titleEl && steps[stepIndex]) {
+    const stepText = steps[stepIndex].querySelector('.step-text');
+    if (stepText) titleEl.textContent = stepText.textContent;
   }
-  thinkingDiv.closest('.chat-messages-area, #chat-messages').scrollTop = 99999;
+  
+  // Update preview if provided
+  if (previewText && thinkingDiv._previewId) {
+    const previewEl = document.getElementById(thinkingDiv._previewId);
+    if (previewEl) {
+      previewEl.textContent = previewText;
+    }
+  }
+  
+  // Scroll to bottom
+  const container = thinkingDiv.closest('.chat-messages-area, #chat-messages');
+  if (container) container.scrollTop = container.scrollHeight;
 }
 
 // ===== ENHANCE =====
@@ -468,10 +675,22 @@ async function handleEnhance(prompt) {
       }, 4000);
     }
 
+    console.log('=== MAKING API CALL ===');
+    console.log('URL:', `${API_BASE}/enhance`);
+    console.log('Body:', body);
+    console.log('Headers:', headers);
+
     const res = await fetch(`${API_BASE}/enhance`, {
       method: 'POST', headers, body: JSON.stringify(body)
     });
+    
+    console.log('=== RESPONSE RECEIVED ===');
+    console.log('Status:', res.status);
+    console.log('OK:', res.ok);
+    
     const result = await res.json();
+    console.log('=== PARSED RESULT ===');
+    console.log('Result:', result);
 
     if (stepTimer) clearInterval(stepTimer);
     loadingMsg.remove();
@@ -540,151 +759,67 @@ async function handleEnhance(prompt) {
         }
         function isFeatureSection(title) {
           const t = title.toLowerCase();
-          return t.includes('feature') || t.includes('functionality');
+          return t.includes('feature') || t.includes('functionality') || t.includes('capabilities') || t.includes('what it does');
+        }
+        // ── Automatic Feature Detection (for fallback diagrams) ───────
+        function hasFeatures(t) {
+          t = t.toLowerCase();
+          const keywords = ['feature', 'functionality', 'breakdown', 'architecture', 'process', 'platform', 'how it works', 'steps'];
+          return keywords.some(k => t.includes(k));
         }
 
-        // ── Build use-case diagram from feature list ────────────────────
+        // ── Build use-case diagram from feature list (D2 format) ────────
         function buildUseCaseDiagram(text) {
-          // Extract bullet points that look like features
           const features = [];
           const lines = text.split('\n');
           for (const line of lines) {
             const m = line.match(/^[-*•]\s+\*{0,2}([^*\n:]{4,60})\*{0,2}/);
             if (m) features.push(m[1].trim().replace(/[^a-zA-Z0-9 &]/g, '').trim());
           }
-          const top = features.slice(0, 10);
-          if (top.length < 3) return '';
-          const nodes = top.map((f, i) => `  User --> F${i}["${f}"]`).join('\n');
-          return 'flowchart TD\n  User(["👤 User"])\n' + nodes;
+          const top = features.slice(0, 8);
+          if (top.length < 2) return '';
+          
+          let d2Code = 'direction: right\n';
+          d2Code += 'User: {\n  shape: person\n  label: 👤 User\n}\n';
+          top.forEach((f, i) => {
+            d2Code += `F${i}: "${f}"\n`;
+            d2Code += `User -> F${i}: use\n`;
+          });
+          return d2Code;
         }
 
         const sections = splitSections(rawText);
 
         // ── Render each section as a card ───────────────────────────────
         let sectionsHtml = '';
-        let buildHtml = '';
-        let agentHtml = '';
-        let featureDiagram = '';
 
         for (const sec of sections) {
           const bodyText = sec.body.join('\n');
           const rendered = renderMarkdown(bodyText);
 
-          if (isAgentSection(sec.title)) {
-            // AI Agent prompts — special styling
-            agentHtml += `
-              <div class="analysis-section agent-section">
-                <div class="section-heading agent-heading">
-                  <span class="section-emoji">🤖</span>
-                  <span>${escapeHtml(sec.title)}</span>
-                </div>
-                <div class="agent-section-body">${rendered}</div>
-              </div>`;
-          } else if (isBuildSection(sec.title)) {
-            buildHtml += `
-              <div class="analysis-section build-section">
-                <div class="section-heading build-heading">
-                  <span class="section-emoji">🏗️</span>
-                  <span>${escapeHtml(sec.title)}</span>
-                </div>
-                <div class="build-section-body">${rendered}</div>
-              </div>`;
-          } else if (isFeatureSection(sec.title)) {
-            if (!featureDiagram) featureDiagram = buildUseCaseDiagram(bodyText);
-            sectionsHtml += `
-              <details class="analysis-section feature-section" open>
-                <summary class="section-heading feature-heading">
-                  <span class="section-emoji">✨</span>
-                  <span>${escapeHtml(sec.title)}</span>
-                  <span class="section-toggle">▾</span>
-                </summary>
-                <div class="section-body">${rendered}</div>
-              </details>`;
-          } else {
-            // Generic collapsible section
-            const emoji = sec.title.match(/^[\u{1F300}-\u{1FFFF}🌐✨🏗️🔌📡🎨📊🔐⚠️💡]/u)?.[0] || '📌';
-            sectionsHtml += `
-              <details class="analysis-section" open>
-                <summary class="section-heading">
-                  <span class="section-emoji">${emoji}</span>
-                  <span>${escapeHtml(sec.title.replace(/^[\u{1F300}-\u{1FFFF}🌐✨🏗️🔌📡🎨📊🔐⚠️💡]\s*/u, ''))}</span>
-                  <span class="section-toggle">▾</span>
-                </summary>
-                <div class="section-body">${rendered}</div>
-              </details>`;
+          // Skip AI Agent and Build sections completely
+          if (isAgentSection(sec.title) || isBuildSection(sec.title)) {
+            continue;
           }
-        }
 
-        // ── Use-case diagram block ──────────────────────────────────────
-        // We render it directly into a <pre class="mermaid"> to avoid DOMPurify stripping the mermaid script/classes
-        const diagramHtml = featureDiagram ? `
-          <div class="analysis-section diagram-section">
-            <div class="section-heading diagram-heading">
-              <span class="section-emoji">📐</span>
-              <span>Use Case Diagram</span>
-            </div>
-            <div class="section-body"><pre class="mermaid" style="background:transparent;border:none;">\n${featureDiagram}\n</pre></div>
-          </div>` : '';
+          // Render all other sections
+          const emoji = sec.title.match(/^[\u{1F300}-\u{1FFFF}🌐✨🏗️🔌📡🎨📊🔐⚠️💡]/u)?.[0] || '📌';
+          sectionsHtml += `
+            <details class="analysis-section" open>
+              <summary class="section-heading">
+                <span class="section-emoji">${emoji}</span>
+                <span>${escapeHtml(sec.title.replace(/^[\u{1F300}-\u{1FFFF}🌐✨🏗️🔌📡🎨📊🔐⚠️💡]\s*/u, ''))}</span>
+                <span class="section-toggle">▾</span>
+              </summary>
+              <div class="section-body">${rendered}</div>
+            </details>`;
+        }
 
         const html = `
           <div class="analysis-card url-analysis-card">
-
-            <!-- ── Site header ── -->
-            <div class="url-site-header">
-              <div class="url-site-info">
-                ${favicon ? `<img src="${favicon}" width="22" height="22" class="url-favicon" onerror="this.style.display='none'">` : ''}
-                <div>
-                  <div class="url-site-title">${escapeHtml(result.page_title || result.site_title || domain)}</div>
-                  <a href="${escapeHtml(url)}" target="_blank" rel="noopener" class="url-site-link">${escapeHtml(url)}</a>
-                </div>
-              </div>
-              <div class="url-badges">
-                <span class="url-badge badge-cyan">🌐 Deep Analysis</span>
-                <span class="url-badge badge-mono">${result.model.toUpperCase()}</span>
-              </div>
-            </div>
-
-            <!-- ── Stats row ── -->
-            <div class="url-stats-row">
-              <div class="url-stat">
-                <span class="url-stat-value">${pagesScraped}</span>
-                <span class="url-stat-label">pages crawled</span>
-              </div>
-              <div class="url-stat">
-                <span class="url-stat-value">${totalChars > 0 ? (totalChars/1000).toFixed(0)+'k' : '—'}</span>
-                <span class="url-stat-label">chars read</span>
-              </div>
-              <div class="url-stat">
-                <span class="url-stat-value">${domain}</span>
-                <span class="url-stat-label">domain</span>
-              </div>
-            </div>
-
-            <!-- ── Pages crawled chips ── -->
-            ${pageChips ? `
-            <div class="url-pages-section">
-              <div class="url-pages-label">Pages crawled</div>
-              <div class="url-pages-chips">${pageChips}</div>
-            </div>` : ''}
-
-            ${result.scrape_error ? `<div class="url-scrape-warning">⚠️ Could not scrape live content — analysis from web search only</div>` : ''}
-
             <!-- ── Analysis sections ── -->
             <div class="url-analysis-body">
               ${sectionsHtml}
-              ${diagramHtml}
-
-              ${buildHtml ? `
-              <div class="build-divider">
-                <span>🏗️ HOW TO BUILD THIS</span>
-              </div>
-              ${buildHtml}` : ''}
-
-              ${agentHtml ? `
-              <div class="build-divider agent-divider">
-                <span>🤖 AI AGENT READY PROMPTS</span>
-              </div>
-              ${agentHtml}` : ''}
             </div>
 
             <!-- ── Actions ── -->
@@ -701,7 +836,7 @@ async function handleEnhance(prompt) {
         addAssistantMessage(html);
         saveMsgToSession('assistant', html);
         try { if (typeof lucide !== 'undefined') lucide.createIcons(); } catch(e) {}
-        try { if (window.mermaid) mermaid.run({ querySelector: '.mermaid' }); } catch(e) {}
+        renderAllD2();
         return;
       }
 
@@ -735,19 +870,18 @@ async function handleEnhance(prompt) {
 
       // ── Standard enhancement ────────────────────────────────────────────
       const html = `
-        <div class="analysis-card">
-          <h3 style="margin-bottom:1rem;color:var(--primary);font-family:var(--font-mono);font-size:0.9rem;">[&gt;_] Enhanced Prompt</h3>
-          <div style="background:rgba(0,0,0,0.3);padding:1.15rem;border-radius:10px;margin-bottom:1rem;line-height:1.75;border:1px solid var(--border);">
+        <div class="analysis-card" style="padding:0;">
+          <div class="enhanced-content-body" style="line-height:1.75;color:var(--text-primary);margin-bottom:1.5rem;">
             ${renderMarkdown(result.enhanced)}
           </div>
-          <div style="display:flex;gap:0.5rem;align-items:center;margin-bottom:0.85rem;flex-wrap:wrap;">
-            <span style="font-size:0.72rem;color:var(--text-secondary);background:var(--primary-light);padding:0.2rem 0.65rem;border-radius:100px;border:1px solid var(--border);font-family:var(--font-mono);">${result.model.toUpperCase()}</span>
-            <span style="font-size:0.72rem;color:var(--text-secondary);background:var(--primary-light);padding:0.2rem 0.65rem;border-radius:100px;border:1px solid var(--border);font-family:var(--font-mono);">${result.classification.category.toUpperCase()}</span>
-            <span style="font-size:0.72rem;color:var(--primary);background:var(--primary-light);padding:0.2rem 0.65rem;border-radius:100px;border:1px solid var(--border);font-family:var(--font-mono);">${result.original_score.quality} → ${result.enhanced_score.quality} (+${result.improvement} pts)</span>
+          <div style="display:flex;gap:0.5rem;align-items:center;margin-bottom:0.85rem;flex-wrap:wrap;border-top:1px solid var(--border);padding-top:1rem;">
+            <span style="font-size:0.72rem;color:var(--text-secondary);background:var(--bg-sidebar);padding:0.25rem 0.65rem;border-radius:100px;border:1px solid var(--border);font-family:var(--font-mono);">${result.model.toUpperCase()}</span>
+            <span style="font-size:0.72rem;color:var(--text-secondary);background:var(--bg-sidebar);padding:0.25rem 0.65rem;border-radius:100px;border:1px solid var(--border);font-family:var(--font-mono);">${result.classification.category.toUpperCase()}</span>
+            <span style="font-size:0.72rem;color:var(--primary);background:var(--primary-ultra-light);padding:0.25rem 0.65rem;border-radius:100px;border:1px solid var(--primary-light);font-family:var(--font-mono);">${result.original_score.quality} → ${result.enhanced_score.quality} (+${result.improvement} pts)</span>
           </div>
           <div class="message-actions">
-            <button onclick="copyText(decodeURIComponent('${encodeURIComponent(result.enhanced).replace(/'/g, '%27')}'))">
-              <i data-lucide="copy"></i> Copy
+            <button onclick="copyText(decodeURIComponent('${encodeURIComponent(result.enhanced).replace(/'/g, '%27')}'))" style="background:transparent;border:1px solid var(--border);color:var(--text-secondary);padding:0.4rem 0.8rem;border-radius:6px;cursor:pointer;display:flex;align-items:center;gap:0.4rem;font-size:0.8rem;transition:all 0.2s;">
+              <i data-lucide="copy" style="width:14px;height:14px;"></i> Copy
             </button>
           </div>
         </div>
@@ -761,7 +895,12 @@ async function handleEnhance(prompt) {
     }
   } catch (error) {
     if (loadingMsg) loadingMsg.remove();
-    const errHtml = `<div class="error-msg">Connection failed — is the server running at ${API_BASE}?</div>`;
+    console.error('=== ENHANCE ERROR ===');
+    console.error('Error type:', error.name);
+    console.error('Error message:', error.message);
+    console.error('Full error:', error);
+    console.error('API_BASE:', API_BASE);
+    const errHtml = `<div class="error-msg">Connection failed — is the server running at ${API_BASE}?<br><small style="opacity:0.7">Error: ${error.message}</small></div>`;
     addAssistantMessage(errHtml);
     saveMsgToSession('assistant', errHtml);
   }
@@ -912,6 +1051,56 @@ function escapeHtml(text) {
 
 function renderMarkdown(text) {
   if (typeof marked !== 'undefined' && typeof DOMPurify !== 'undefined') {
+    // Custom handling for D2 diagram blocks (e.g. ```d2 ... ```)
+    if (text.toLowerCase().includes('```d2')) {
+      text = text.replace(/```d2\s*([\s\S]*?)```/gi, (match, code) => {
+        return `<div class="analysis-section diagram-section" style="margin:1rem 0;background:#ffffff;border:1px solid var(--border);border-radius:8px;overflow:hidden;box-shadow:var(--shadow);position:relative;">
+          <div class="section-heading" style="padding:0.75rem 1rem;background:#fafafa;border-bottom:1px solid var(--border);font-weight:700;font-size:0.8rem;display:flex;justify-content:space-between;align-items:center;color:#000;">
+            <div style="display:flex;align-items:center;gap:0.5rem;">
+              <span>📐 System Architecture View</span>
+            </div>
+            <div class="diagram-toolbar" style="display:flex;gap:0.5rem;align-items:center;">
+              <button onclick="zoomDiagram(this, 1.1)" title="Zoom In" style="background:none;border:none;cursor:pointer;font-size:1rem;padding:2px;">➕</button>
+              <button onclick="zoomDiagram(this, 0.9)" title="Zoom Out" style="background:none;border:none;cursor:pointer;font-size:1rem;padding:2px;">➖</button>
+              <button onclick="downloadDiagram(this)" title="Download PNG" style="background:none;border:none;cursor:pointer;font-size:1rem;padding:2px;margin-left:5px;">💾</button>
+            </div>
+          </div>
+          <div class="section-body diagram-wrapper" style="padding:0;display:flex;justify-content:center;background:#ffffff;min-height:300px;overflow:auto;position:relative;">
+            <div class="d2-diagram-container zoom-target" data-d2="${encodeURIComponent(code.trim())}" style="width:100%;height:auto;display:flex;align-items:center;justify-content:center;transform-origin:top center;transition:transform 0.2s;">
+              <div style="padding:2rem;color:var(--text-muted);font-size:0.75rem;">Initializing high-fidelity diagram...</div>
+            </div>
+          </div>
+        </div>`;
+      });
+    } else if (text.includes('{ shape:') && text.includes(' -> ')) {
+      // SAFETY FALLBACK: Capture un-fenced D2 code
+      const lines = text.split('\n');
+      let d2Buffer = [];
+      let nonD2Before = [];
+      let nonD2After = [];
+      let foundD2 = false;
+      for (const line of lines) {
+        if (line.includes('{ shape:') || line.includes(' -> ') || (foundD2 && line.trim().length > 0 && !line.match(/^[a-zA-Z0-9]/))) {
+          d2Buffer.push(line);
+          foundD2 = true;
+        } else if (!foundD2) { nonD2Before.push(line); } else { nonD2After.push(line); }
+      }
+      if (d2Buffer.length > 2) {
+        const code = d2Buffer.join('\n');
+        const diagramHtml = `<div class="analysis-section diagram-section" style="margin:1rem 0;background:#ffffff;border:1px solid var(--border);border-radius:8px;overflow:hidden;box-shadow:var(--shadow);">
+          <div class="section-heading" style="padding:0.75rem 1rem;background:#fafafa;border-bottom:1px solid var(--border);font-weight:700;font-size:0.8rem;display:flex;align-items:center;gap:0.5rem;color:#000;">
+            <span>📐 System Architecture View (Auto-Detected)</span>
+          </div>
+          <div class="section-body" style="padding:0;display:flex;justify-content:center;background:#ffffff;min-height:300px;">
+            <div class="d2-diagram-container" data-d2="${encodeURIComponent(code.trim())}" style="width:100%;height:auto;display:flex;align-items:center;justify-content:center;">
+              <div style="padding:2rem;color:var(--text-muted);font-size:0.75rem;">Initializing high-fidelity diagram...</div>
+            </div>
+          </div>
+        </div>`;
+        text = nonD2Before.join('\n') + '\n' + diagramHtml + '\n' + nonD2After.join('\n');
+      }
+    }
+
     // Custom handling for [!TIP] thinking block
     if (text.includes('> [!TIP]') && text.includes('Thinking Process:')) {
       text = text.replace(/> \[!TIP\]\n> \*\*Thinking Process:\*\*\n> ([\s\S]*?)\n\n/g, (match, p1) => {
@@ -924,6 +1113,7 @@ function renderMarkdown(text) {
         </div>\n\n`;
       });
     }
+
     return DOMPurify.sanitize(marked.parse(text));
   }
   return escapeHtml(text);
@@ -962,3 +1152,109 @@ function showToast(title, message, type = 'success') {
     setTimeout(() => toast.remove(), 300);
   }, 3000);
 }
+
+/**
+ * Renders all D2 diagram containers in the chat
+ */
+async function renderAllD2() {
+  const containers = document.querySelectorAll('.d2-diagram-container:not([data-rendered])');
+  if (containers.length === 0) return;
+  
+  console.log(`Rendering ${containers.length} D2 diagrams via optimized Cloud Engine...`);
+  
+  for (const el of containers) {
+    try {
+      const codeAttr = el.getAttribute('data-d2');
+      if (!codeAttr) continue;
+      
+      const code = decodeURIComponent(codeAttr);
+      el.setAttribute('data-rendered', 'true');
+
+      // Kroki API expects base64 + zlib, but we can also use the simple /d2/svg/ path
+      // Actually, Kroki has a very simple GET API for D2.
+      // We will use the POST API for reliability with large diagrams
+      const response = await fetch('https://kroki.io/d2/svg', {
+        method: 'POST',
+        headers: { 'Content-Type': 'text/plain' },
+        body: code
+      });
+
+      if (response.ok) {
+        const svg = await response.text();
+        el.innerHTML = svg;
+        console.log('D2 render successful via Kroki');
+        
+        const svgEl = el.querySelector('svg');
+        if (svgEl) {
+          svgEl.style.width = '100%';
+          svgEl.style.height = 'auto';
+          svgEl.style.maxWidth = '100%';
+        }
+      } else {
+        throw new Error(`Cloud engine response: ${response.status}`);
+      }
+    } catch (e) {
+      console.warn('Cloud D2 failed, using Technical Fallback:', e);
+      const codeAttr = el.getAttribute('data-d2');
+      const rawCode = codeAttr ? decodeURIComponent(codeAttr) : '';
+      
+      el.innerHTML = `
+        <div style="background:#ffffff;border:1px solid var(--border);border-radius:12px;overflow:hidden;box-shadow:var(--shadow-sm);">
+          <div style="background:#f8fafc;padding:0.75rem 1.25rem;border-bottom:1px solid var(--border);display:flex;justify-content:between;align-items:center;">
+             <span style="font-size:0.7rem;font-weight:800;color:var(--primary);text-transform:uppercase;letter-spacing:1px;">📐 System Logic Specification</span>
+          </div>
+          <div style="padding:1.5rem;background:#ffffff;font-family:var(--font-mono);font-size:0.88rem;color:#1e293b;line-height:1.7;white-space:pre-wrap;">${escapeHtml(rawCode)}</div>
+        </div>
+      `;
+    }
+  }
+}
+/**
+ * INTERACTIVE DIAGRAM FUNCTIONS
+ */
+window.zoomDiagram = function(btn, factor) {
+  const wrapper = btn.closest('.diagram-section').querySelector('.zoom-target');
+  if (!wrapper) return;
+  const currentScale = parseFloat(wrapper.dataset.scale || 1);
+  const newScale = Math.min(Math.max(currentScale * factor, 0.5), 3);
+  wrapper.style.transform = `scale(${newScale})`;
+  wrapper.dataset.scale = newScale;
+  // Adjust wrapper height to prevent overlap if zooming in
+  if (newScale > 1) {
+    wrapper.style.marginBottom = `${(newScale - 1) * 300}px`;
+  } else {
+    wrapper.style.marginBottom = '0';
+  }
+};
+
+window.downloadDiagram = function(btn) {
+  const svg = btn.closest('.diagram-section').querySelector('svg');
+  if (!svg) return showToast('[ERR]', 'Diagram not rendered yet', 'error');
+  
+  const svgData = new XMLSerializer().serializeToString(svg);
+  const canvas = document.createElement('canvas');
+  const ctx = canvas.getContext('2d');
+  const img = new Image();
+  
+  // High res download
+  const svgSize = svg.getBoundingClientRect();
+  const scale = 2; // 2x resolution
+  canvas.width = svgSize.width * scale;
+  canvas.height = svgSize.height * scale;
+  
+  img.onload = function() {
+    ctx.fillStyle = "white";
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+    ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+    const pngUrl = canvas.toDataURL("image/png");
+    const downloadLink = document.createElement("a");
+    downloadLink.href = pngUrl;
+    downloadLink.download = "promptx_diagram.png";
+    document.body.appendChild(downloadLink);
+    downloadLink.click();
+    document.body.removeChild(downloadLink);
+    showToast('[OK]', 'Diagram downloaded as PNG', 'success');
+  };
+  
+  img.src = "data:image/svg+xml;base64," + btoa(unescape(encodeURIComponent(svgData)));
+};

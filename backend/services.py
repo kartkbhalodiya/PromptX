@@ -42,33 +42,28 @@ class AIModelFallback:
     
     def __init__(self):
         self.models = [
-            {'name': 'gemini', 'priority': 1},
-            {'name': 'groq',   'priority': 2},
-            {'name': 'nvidia', 'priority': 3},
-            {'name': 'mistral','priority': 4},
-            {'name': 'llama_405b','priority': 5},
-            {'name': 'glm','priority': 6},
-            {'name': 'deepseek','priority': 7},
-            {'name': 'kimi','priority': 8},
-            {'name': 'kimi_think','priority': 9},
-            {'name': 'gpt_oss','priority': 10},
+            {'name': 'gemini_flash', 'priority': 1},
+            {'name': 'gemini_flash_8b', 'priority': 2},
+            {'name': 'gemini_pro', 'priority': 3},
+            {'name': 'nvidia_minimax', 'priority': 4},
+            {'name': 'groq', 'priority': 5},
         ]
     
     def generate(self, prompt, max_tokens=2000, preferred_model=None, api_key=None):
-        """Try models in order until one succeeds. If preferred_model is strict, don't fallback."""
+        """Try models in order until one succeeds. If preferred_model is explicitly set, ONLY use that model."""
         errors = []
         
-        # If user explicitly chose a model, we ONLY try that model (NO FALLBACK)
-        # to ensure the user gets what they explicitly selected.
-        if preferred_model and preferred_model in [m['name'] for m in self.models]:
+        # If user explicitly chose a model, ONLY use that model (no fallback)
+        if preferred_model and preferred_model != 'auto' and preferred_model in [m['name'] for m in self.models]:
             try:
                 result = self._call_model(preferred_model, prompt, max_tokens, api_key=api_key)
                 if result:
                     return {'text': result, 'model': preferred_model, 'success': True}
             except Exception as e:
+                # When user explicitly selects a model, don't fallback - just fail with clear error
                 raise Exception(f"Selected model '{preferred_model}' failed: {str(e)}")
         
-        # Otherwise, follow fallback order
+        # Auto mode: Try all models in fallback order
         for model in self.models:
             try:
                 result = self._call_model(model['name'], prompt, max_tokens, api_key=api_key)
@@ -78,38 +73,42 @@ class AIModelFallback:
                 errors.append(f"{model['name']}: {str(e)}")
                 continue
         
+        # Check if all errors are quota-related
+        if all('429' in str(e) or 'quota' in str(e).lower() or 'resource_exhausted' in str(e).lower() for e in errors):
+            raise Exception(
+                "⚠️ QUOTA EXCEEDED: All Gemini models have hit their daily free tier limit. "
+                "Solutions: (1) Wait until tomorrow for quota reset, (2) Get a new API key from https://aistudio.google.com/apikey, "
+                "(3) Add GROQ_API_KEY to .env for fallback. Current errors: " + '; '.join(errors[:2])
+            )
+        
         raise Exception(f"All models failed. Errors: {'; '.join(errors)}")
     
     def _call_model(self, model_name, prompt, max_tokens, api_key=None):
-        if model_name == 'gemini':
-            return self._call_gemini(prompt, api_key=api_key)
+        if model_name == 'gemini_flash':
+            return self._call_gemini(prompt, 'gemini-2.0-flash', api_key=api_key)
+        elif model_name == 'gemini_flash_8b':
+            return self._call_gemini(prompt, 'gemini-2.0-flash-lite', api_key=api_key)
+        elif model_name == 'gemini_pro':
+            return self._call_gemini(prompt, 'gemini-2.5-pro', api_key=api_key)
+        elif model_name == 'nvidia_minimax':
+            return self._call_nvidia_minimax(prompt, max_tokens, api_key=api_key)
         elif model_name == 'groq':
             return self._call_groq(prompt, max_tokens, api_key=api_key)
-        elif model_name == 'nvidia':
-            return self._call_nvidia(prompt, max_tokens, api_key=api_key)
-        elif model_name == 'mistral':
-            return self._call_mistral(prompt, max_tokens, api_key=api_key)
-        elif model_name == 'llama_405b':
-            return self._call_llama_405b(prompt, max_tokens, api_key=api_key)
-        elif model_name == 'glm':
-            return self._call_glm(prompt, max_tokens, api_key=api_key)
-        elif model_name == 'deepseek':
-            return self._call_deepseek(prompt, max_tokens, api_key=api_key)
-        elif model_name == 'kimi':
-            return self._call_kimi(prompt, max_tokens, api_key=api_key)
-        elif model_name == 'kimi_think':
-            return self._call_kimi_think(prompt, max_tokens, api_key=api_key)
-        elif model_name == 'gpt_oss':
-            return self._call_gpt_oss(prompt, max_tokens, api_key=api_key)
     
-    def _call_gemini(self, prompt, api_key=None):
+    def _call_gemini(self, prompt, model='gemini-2.0-flash', api_key=None):
         key = api_key or os.getenv('GEMINI_API_KEY')
         if not key:
             raise ValueError("GEMINI_API_KEY not found")
         client = genai.Client(api_key=key)
         response = client.models.generate_content(
-            model='gemini-2.0-flash',
-            contents=prompt
+            model=model,
+            contents=prompt,
+            config={
+                'temperature': 0.3,
+                'top_p': 0.95,
+                'top_k': 40,
+                'max_output_tokens': 8192,
+            }
         )
         return response.text.strip()
 
@@ -117,13 +116,26 @@ class AIModelFallback:
         key = api_key or os.getenv('GROQ_API_KEY')
         if not key:
             raise ValueError("GROQ_API_KEY not found")
+        
+        # Groq has strict limits - truncate aggressively
+        max_input_chars = 30000  # Much more conservative
+        if len(prompt) > max_input_chars:
+            prompt = prompt[:max_input_chars] + "\n\n[Content truncated to fit Groq limits]"
+        
+        messages = self._split_prompt(prompt)
+        
+        # Truncate individual messages
+        for msg in messages:
+            if len(msg.get('content', '')) > max_input_chars:
+                msg['content'] = msg['content'][:max_input_chars] + "\n\n[Truncated]"
+        
         response = requests.post(
             'https://api.groq.com/openai/v1/chat/completions',
             headers={'Authorization': f'Bearer {key}'},
             json={
                 'model': 'llama-3.3-70b-versatile',
-                'messages': self._split_prompt(prompt),
-                'max_tokens': min(max_tokens, 8192),
+                'messages': messages,
+                'max_tokens': min(max_tokens, 4096),
                 'temperature': 0.7,
             },
             timeout=60
@@ -132,207 +144,43 @@ class AIModelFallback:
         msg = response.json().get('choices', [{}])[0].get('message', {})
         return str(msg.get('content', '')).strip()
 
-    def _call_nvidia(self, prompt, max_tokens, api_key=None):
+    def _call_nvidia_minimax(self, prompt, max_tokens, api_key=None):
         key = api_key or os.getenv('NVIDIA_API_KEY')
         if not key:
             raise ValueError("NVIDIA_API_KEY not found")
         
         from openai import OpenAI
+        import httpx
+        
+        # Create client with longer timeout
         client = OpenAI(
             base_url="https://integrate.api.nvidia.com/v1",
-            api_key=key
+            api_key=key,
+            timeout=httpx.Timeout(60.0, connect=10.0)  # 60s total, 10s connect
         )
-
-        completion = client.chat.completions.create(
-            model="minimaxai/minimax-m2.7",
-            messages=self._split_prompt(prompt),
-            temperature=0.7,
-            top_p=0.9,
-            max_tokens=min(max_tokens, 4096),
-            stream=False
-        )
-        return completion.choices[0].message.content.strip()
-
-    def _call_mistral(self, prompt, max_tokens, api_key=None):
-        key = api_key or os.getenv('MISTRAL_API_KEY')
-        if not key:
-            raise ValueError("MISTRAL_API_KEY not found")
         
-        response = requests.post(
-            "https://integrate.api.nvidia.com/v1/chat/completions",
-            headers={
-                "Authorization": f"Bearer {key}",
-                "Accept": "application/json"
-            },
-            json={
-                "model": "mistralai/mistral-large-3-675b-instruct-2512",
-                "messages": self._split_prompt(prompt),
-                "max_tokens": min(max_tokens, 4096),
-                "temperature": 0.15,
-                "top_p": 1.0,
-                "stream": False
-            },
-            timeout=30
-        )
-        response.raise_for_status()
-        return response.json()['choices'][0]['message']['content'].strip()
-
-    def _call_llama_405b(self, prompt, max_tokens, api_key=None):
-        key = api_key or os.getenv('LLAMA_405B_API_KEY')
-        if not key:
-            raise ValueError("LLAMA_405B_API_KEY not found")
+        # Truncate prompt for faster response
+        max_input_chars = 6000
+        if len(prompt) > max_input_chars:
+            prompt = prompt[:max_input_chars] + "\n\n[Truncated for speed]"
         
-        from openai import OpenAI
-        client = OpenAI(
-            base_url="https://integrate.api.nvidia.com/v1",
-            api_key=key
-        )
-
-        completion = client.chat.completions.create(
-            model="meta/llama-3.1-405b-instruct",
-            messages=self._split_prompt(prompt),
-            temperature=0.2,
-            top_p=0.7,
-            max_tokens=min(max_tokens, 4096),
-            stream=False
-        )
-        return completion.choices[0].message.content.strip()
-
-    def _call_glm(self, prompt, max_tokens, api_key=None):
-        key = api_key or os.getenv('GLM_API_KEY')
-        if not key:
-            raise ValueError("GLM_API_KEY not found")
+        messages = self._split_prompt(prompt)
         
-        from openai import OpenAI
-        client = OpenAI(
-            base_url="https://integrate.api.nvidia.com/v1",
-            api_key=key
-        )
-
-        completion = client.chat.completions.create(
-            model="z-ai/glm4.7",
-            messages=self._split_prompt(prompt),
-            temperature=1.0,
-            top_p=1.0,
-            max_tokens=min(max_tokens, 4096),
-            extra_body={"chat_template_kwargs":{"enable_thinking":True,"clear_thinking":False}},
-            stream=False
-        )
-        msg = completion.choices[0].message
-        content = msg.content or ""
-        reasoning = getattr(msg, "reasoning_content", None)
-        if reasoning:
-            return f"> [!TIP]\n> **Thinking Process:**\n> {reasoning}\n\n{content}".strip()
-        return content.strip()
-
-    def _call_deepseek(self, prompt, max_tokens, api_key=None):
-        key = api_key or os.getenv('DEEP_SEEK_API_KEY')
-        if not key:
-            raise ValueError("DEEP_SEEK_API_KEY not found")
-        
-        from openai import OpenAI
-        client = OpenAI(
-            base_url="https://integrate.api.nvidia.com/v1",
-            api_key=key
-        )
-
-        completion = client.chat.completions.create(
-            model="deepseek-ai/deepseek-v3.2",
-            messages=self._split_prompt(prompt),
-            temperature=1.0,
-            top_p=0.95,
-            max_tokens=min(max_tokens, 4096),
-            extra_body={"chat_template_kwargs": {"thinking":True}},
-            stream=False
-        )
-        msg = completion.choices[0].message
-        content = msg.content or ""
-        reasoning = getattr(msg, "reasoning_content", None)
-        if reasoning:
-            return f"> [!TIP]\n> **Thinking Process:**\n> {reasoning}\n\n{content}".strip()
-        return content.strip()
-
-    def _call_kimi(self, prompt, max_tokens, api_key=None):
-        key = api_key or os.getenv('KIMI_API_KEY')
-        if not key:
-            raise ValueError("KIMI_API_KEY not found")
-        
-        response = requests.post(
-            "https://integrate.api.nvidia.com/v1/chat/completions",
-            headers={
-                "Authorization": f"Bearer {key}",
-                "Accept": "application/json"
-            },
-            json={
-                "model": "moonshotai/kimi-k2.5",
-                "messages": self._split_prompt(prompt),
-                "max_tokens": min(max_tokens, 16384),
-                "temperature": 1.0,
-                "top_p": 1.0,
-                "stream": False,
-                "chat_template_kwargs": {"thinking": True}
-            },
-            timeout=40
-        )
-        response.raise_for_status()
-        msg = response.json()['choices'][0]['message']
-        content = msg.get('content', '')
-        reasoning = msg.get('reasoning_content')
-        if reasoning:
-            return f"> [!TIP]\n> **Thinking Process:**\n> {reasoning}\n\n{content}".strip()
-        return content.strip()
-
-    def _call_kimi_think(self, prompt, max_tokens, api_key=None):
-        key = api_key or os.getenv('KIMI_THINK_API_KEY')
-        if not key:
-            raise ValueError("KIMI_THINK_API_KEY not found")
-        
-        from openai import OpenAI
-        client = OpenAI(
-            base_url="https://integrate.api.nvidia.com/v1",
-            api_key=key
-        )
-
-        completion = client.chat.completions.create(
-            model="moonshotai/kimi-k2-thinking",
-            messages=self._split_prompt(prompt),
-            temperature=1.0,
-            top_p=0.9,
-            max_tokens=min(max_tokens, 4000),
-            stream=False
-        )
-        msg = completion.choices[0].message
-        content = msg.content or ""
-        reasoning = getattr(msg, "reasoning_content", None)
-        if reasoning:
-            return f"> [!TIP]\n> **Thinking Process:**\n> {reasoning}\n\n{content}".strip()
-        return content.strip()
-
-    def _call_gpt_oss(self, prompt, max_tokens, api_key=None):
-        key = api_key or os.getenv('GPT_OSS_API_KEY')
-        if not key:
-            raise ValueError("GPT_OSS_API_KEY not found")
-        
-        from openai import OpenAI
-        client = OpenAI(
-            base_url="https://integrate.api.nvidia.com/v1",
-            api_key=key
-        )
-
-        completion = client.chat.completions.create(
-            model="openai/gpt-oss-120b",
-            messages=self._split_prompt(prompt),
-            temperature=1.0,
-            top_p=1.0,
-            max_tokens=min(max_tokens, 4096),
-            stream=False
-        )
-        msg = completion.choices[0].message
-        content = msg.content or ""
-        reasoning = getattr(msg, "reasoning_content", None)
-        if reasoning:
-            return f"> [!TIP]\n> **Thinking Process:**\n> {reasoning}\n\n{content}".strip()
-        return content.strip()
+        try:
+            completion = client.chat.completions.create(
+                model="minimaxai/minimax-m2.7",
+                messages=messages,
+                temperature=0.7,
+                top_p=0.9,
+                max_tokens=min(max_tokens, 2048),
+                stream=False
+            )
+            return completion.choices[0].message.content.strip()
+        except Exception as e:
+            error_msg = str(e)
+            if "timeout" in error_msg.lower():
+                raise Exception(f"NVIDIA API timeout - the model is taking too long to respond. Try a simpler prompt or use a different model.")
+            raise Exception(f"NVIDIA API error: {error_msg}")
 
     def _split_prompt(self, prompt):
         """Separate system and user parts if combined."""
@@ -683,16 +531,22 @@ Make it as detailed and exhaustive as possible:\n{prompt}"""
 Structure the final output as a comprehensive, highly-organized technical document. It MUST include:
 1. **Context & Role**: Set the precise persona and background information.
 2. **Request**: The core task defined with unambiguous clarity.
-3. **Explanation (Diagram)**: Provide a visual architecture or logic flow using a Mermaid.js diagram (e.g. ```mermaid ...```). This is mandatory to elaborate and explain complex structures.
+ 3. **Explanation (Diagram)**: Provide a visual architecture or logic flow using a D2 diagram. 
+    CRITICAL REQUIREMENT: You MUST wrap the diagram code in TRIPLE BACKTICKS with the 'd2' identifier.
+    Format:
+    ```d2
+    [Your D2 code here]
+    ```
+    D2 Syntax: `NodeName: { shape: person; label: "Label Name" }`. Use `->` for connections. NO ASCII ART.
 4. **Action Steps**: Step-by-step breakdown of how the task should be executed.
 5. **Tone & Constraints**: Explicit boundaries, technologies, and styling rules.
 6. **Extras/Examples**: Include edge cases or output format specifications.
 Ensure the final output is exceptionally professional and visually structured using Markdown headers and bullet points. Here is the original prompt to enhance:\n{prompt}"""
 
         p_model = preferred_model
-        v1_model = p_model or 'gemini'
-        v2_model = p_model or 'mistral'
-        v3_model = p_model or 'llama_405b'
+        v1_model = p_model or 'gemini_flash'
+        v2_model = p_model or 'gemini_flash_8b'
+        v3_model = p_model or 'gemini_pro'
 
         # Execute all 3 variations CONCURRENTLY
         with ThreadPoolExecutor(max_workers=3) as executor:

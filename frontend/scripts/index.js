@@ -1,12 +1,23 @@
-const API_BASE = (function() {
-  const loc = window.location;
-  if (loc.protocol === 'file:') return 'http://127.0.0.1:8000/api';
-  return `${loc.protocol}//${loc.hostname}:${loc.port || (loc.protocol === 'https:' ? '443' : '80')}/api`;
-})();
+// Only declare API_BASE if it doesn't exist
+if (typeof window.API_BASE === 'undefined') {
+  window.API_BASE = (function() {
+    const loc = window.location;
+    if (loc.protocol === 'file:') return 'http://127.0.0.1:8000/api';
+    return `${loc.protocol}//${loc.hostname}:${loc.port || (loc.protocol === 'https:' ? '443' : '80')}/api`;
+  })();
+}
+const API_BASE = window.API_BASE;
 let currentMode = 'enhance';
 let selectedModel = 'auto';
 
+window.addEventListener('load', () => {
+  // Reveal the canvas tee box after data load
+  document.body.classList.add('data-loaded');
+});
+
 document.addEventListener('DOMContentLoaded', () => {
+  document.body.classList.add('js-enhanced');
+
   try {
     if (typeof lucide !== 'undefined') {
       lucide.createIcons();
@@ -23,9 +34,10 @@ document.addEventListener('DOMContentLoaded', () => {
   // Landing page specific
   if (document.getElementById('navbar')) {
     setupNavbar();
-    setupScrollAnimations();
     setupMobileNav();
   }
+  setupScrollAnimations();
+  setupCanvasParticles();
   
   // Chat page or landing page mode tabs
   setupModeTabs();
@@ -337,11 +349,11 @@ async function handleAnalyze(prompt) {
           
           <div style="display: flex; gap: 2rem; justify-content: center; margin-bottom: 2rem; padding: 1.5rem; background: rgba(0,0,0,0.3); border-radius: 12px; border: 1px solid var(--border);">
             <div style="text-align: center;">
-              <div style="font-size: 2.5rem; font-weight: 800; color: var(--primary); font-family: var(--font-display); text-shadow: 0 0 20px rgba(0,255,65,0.3);">${analysis.overall}</div>
+              <div style="font-size: 2.5rem; font-weight: 800; color: var(--primary); font-family: var(--font-display); text-shadow: 0 0 20px rgba(255,102,0,0.3);">${analysis.overall}</div>
               <div style="color: var(--text-secondary); font-size: 0.8rem; font-family: var(--font-mono);">SCORE</div>
             </div>
             <div style="text-align: center;">
-              <div style="font-size: 2.5rem; font-weight: 800; color: var(--primary); font-family: var(--font-display); text-shadow: 0 0 20px rgba(0,255,65,0.3);">${analysis.grade}</div>
+              <div style="font-size: 2.5rem; font-weight: 800; color: var(--primary); font-family: var(--font-display); text-shadow: 0 0 20px rgba(255,102,0,0.3);">${analysis.grade}</div>
               <div style="color: var(--text-secondary); font-size: 0.8rem; font-family: var(--font-mono);">GRADE</div>
             </div>
           </div>
@@ -353,7 +365,7 @@ async function handleAnalyze(prompt) {
                   ${key.replace('_', ' ')}
                 </div>
                 <div style="height: 6px; background: rgba(255,255,255,0.05); border-radius: 3px; overflow: hidden; margin-bottom: 0.4rem;">
-                  <div style="height: 100%; width: ${(value.score / 10) * 100}%; background: linear-gradient(90deg, var(--primary), var(--accent)); border-radius: 3px; box-shadow: 0 0 8px rgba(0,255,65,0.3);"></div>
+                  <div style="height: 100%; width: ${(value.score / 10) * 100}%; background: linear-gradient(90deg, var(--primary), var(--accent)); border-radius: 3px; box-shadow: 0 0 8px rgba(255,102,0,0.3);"></div>
                 </div>
                 <div style="font-size: 1rem; font-weight: 700; color: var(--primary); font-family: var(--font-mono);">${value.score}/10</div>
               </div>
@@ -556,12 +568,7 @@ function getSafeHistory() {
   catch(e) { return []; }
 }
 
-function renderMarkdown(text) {
-  if (typeof marked !== 'undefined' && typeof DOMPurify !== 'undefined') {
-    return DOMPurify.sanitize(marked.parse(text));
-  }
-  return escapeHtml(text);
-}
+// renderMarkdown moved to chat.js for unified logic
 
 function exportHistory() {
   const history = getSafeHistory();
@@ -574,4 +581,91 @@ function exportHistory() {
   a.click();
   URL.revokeObjectURL(url);
   showToast('[OK] Exported', 'History downloaded', 'success');
+}
+
+// ===== INTERACTIVE CANVAS PARTICLE SYSTEM =====
+function setupCanvasParticles() {
+  const canvas = document.getElementById('fc-canvas-particles');
+  if (!canvas) return;
+  const ctx = canvas.getContext('2d');
+  let w, h;
+  let mouse = { x: -9999, y: -9999 };
+  const PARTICLE_COUNT = 70;
+  const CONNECTION_DIST = 120;
+  const MOUSE_RADIUS = 150;
+  const particles = [];
+
+  function resize() {
+    w = canvas.width = window.innerWidth;
+    h = canvas.height = window.innerHeight;
+  }
+  resize();
+  window.addEventListener('resize', resize);
+
+  document.addEventListener('mousemove', (e) => {
+    mouse.x = e.clientX;
+    mouse.y = e.clientY;
+  });
+  document.addEventListener('mouseleave', () => {
+    mouse.x = -9999;
+    mouse.y = -9999;
+  });
+
+  for (let i = 0; i < PARTICLE_COUNT; i++) {
+    particles.push({
+      x: Math.random() * (w || window.innerWidth),
+      y: Math.random() * (h || window.innerHeight),
+      vx: (Math.random() - 0.5) * 0.4,
+      vy: (Math.random() - 0.5) * 0.4,
+      r: Math.random() * 1.8 + 0.8,
+      alpha: Math.random() * 0.4 + 0.15
+    });
+  }
+
+  function draw() {
+    ctx.clearRect(0, 0, w, h);
+    for (let i = 0; i < particles.length; i++) {
+      const p = particles[i];
+      p.x += p.vx;
+      p.y += p.vy;
+      if (p.x < 0) p.x = w;
+      if (p.x > w) p.x = 0;
+      if (p.y < 0) p.y = h;
+      if (p.y > h) p.y = 0;
+
+      const dx = p.x - mouse.x;
+      const dy = p.y - mouse.y;
+      const dist = Math.sqrt(dx * dx + dy * dy);
+      if (dist < MOUSE_RADIUS && dist > 0) {
+        const force = (MOUSE_RADIUS - dist) / MOUSE_RADIUS;
+        p.vx += (dx / dist) * force * 0.3;
+        p.vy += (dy / dist) * force * 0.3;
+      }
+      p.vx *= 0.995;
+      p.vy *= 0.995;
+
+      ctx.beginPath();
+      ctx.arc(p.x, p.y, p.r, 0, Math.PI * 2);
+      ctx.fillStyle = 'rgba(139, 0, 0, ' + p.alpha + ')';
+      ctx.fill();
+
+      for (let j = i + 1; j < particles.length; j++) {
+        const p2 = particles[j];
+        const cdx = p.x - p2.x;
+        const cdy = p.y - p2.y;
+        const cdist = Math.sqrt(cdx * cdx + cdy * cdy);
+        if (cdist < CONNECTION_DIST) {
+          const lineAlpha = (1 - cdist / CONNECTION_DIST) * 0.12;
+          ctx.beginPath();
+          ctx.moveTo(p.x, p.y);
+          ctx.lineTo(p2.x, p2.y);
+          ctx.strokeStyle = 'rgba(139, 0, 0, ' + lineAlpha + ')';
+          ctx.lineWidth = 0.6;
+          ctx.stroke();
+        }
+      }
+    }
+    requestAnimationFrame(draw);
+  }
+  draw();
 }

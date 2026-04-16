@@ -9,9 +9,9 @@
   <link rel="icon" type="image/svg+xml" href="/Public/star.svg">
   <link rel="stylesheet" href="/styles/index.css">
   <style>
-    /* Two-Column Cyberpunk Login */
+    /* Premium Clean Login UI */
     body {
-      background: var(--bg-darker);
+      background: var(--bg-dark);
       color: var(--text-primary);
       min-height: 100vh;
       overflow-x: hidden;
@@ -23,12 +23,14 @@
     .login-split-container {
       display: flex;
       width: 100%;
-      max-width: 1200px; /* Wide for split layout */
-      height: 650px;
-      margin: 2rem;
-      gap: 2rem;
+      max-width: 1000px;
+      min-height: 600px;
+      margin: 2rem auto;
+      gap: 3rem;
       z-index: 100;
       animation: fadeIn 0.8s ease-out;
+      align-items: center;
+      justify-content: center;
     }
 
     @keyframes fadeIn {
@@ -45,110 +47,208 @@
     }
 
     .login-card {
-      background: var(--bg-card);
-      backdrop-filter: blur(20px);
+      background: rgba(255, 255, 255, 0.95);
       border: 1px solid var(--border);
       border-radius: var(--radius-lg);
-      padding: 2.5rem;
-      height: 100%;
+      padding: 2.5rem 2rem;
+      height: auto;
+      min-height: 500px;
       display: flex;
       flex-direction: column;
-      box-shadow: var(--shadow-glow);
-      position: relative;
+      box-shadow: 0 8px 32px rgba(0, 0, 0, 0.08);
+      backdrop-filter: blur(20px);
     }
 
-    .login-card::after {
-      content: "";
-      position: absolute;
-      inset: 0;
-      background: linear-gradient(rgba(0, 255, 65, 0.03) 50%, transparent 50%);
-      background-size: 100% 4px;
-      pointer-events: none;
-      border-radius: inherit;
-    }
-
-    /* RIGHT SIDE: Coding Preview (Ghost Terminal) */
+    /* RIGHT SIDE: Coding Preview */
     .login-right {
-      flex: 1.2;
-      background: rgba(0, 0, 0, 0.4);
+      flex: 1;
+      background: rgba(255, 255, 255, 0.9);
       border: 1px solid var(--border);
       border-radius: var(--radius-lg);
-      padding: 1.5rem;
+      padding: 2rem;
       position: relative;
       overflow: hidden;
-      opacity: 0.4; /* Low visibility as requested */
-      transition: opacity 0.5s ease;
       display: flex;
       flex-direction: column;
-    }
-
-    .login-right:hover {
-      opacity: 0.7;
+      box-shadow: 0 8px 32px rgba(0, 0, 0, 0.08);
+      backdrop-filter: blur(20px);
+      min-height: 500px;
     }
 
     .terminal-mock {
       font-family: var(--font-mono);
-      font-size: 0.85rem;
-      line-height: 1.6;
-      color: var(--primary);
+      font-size: 0.9rem;
+      line-height: 1.7;
+      color: var(--text-primary);
     }
 
     .code-comment { color: var(--text-muted); }
-    .code-keyword { color: #ff79c6; }
-    .code-string { color: #f1fa8c; }
-    .code-func { color: #50fa7b; }
+    .code-keyword { color: var(--primary); font-weight: bold; }
+    .code-string { color: #cc5200; }
+    .code-func { color: var(--text-primary); font-weight: 600; }
 
-    /* Login Form Styles - Scaled for 100% zoom */
-    .terminal-header { text-align: center; margin-bottom: 2rem; }
-    .terminal-logo { width: 56px; height: 56px; margin-bottom: 1rem; filter: drop-shadow(0 0 10px var(--primary)); }
-    .terminal-header h1 { font-family: var(--font-display); font-size: 1.4rem; letter-spacing: 0.15em; color: var(--primary); }
+    /* Login Form Styles */
+    .terminal-header { text-align: center; margin-bottom: 2.5rem; }
+    .terminal-logo { width: 160px; height: auto; margin-bottom: 0.5rem; mix-blend-mode: multiply; }
+    .terminal-header h1 { font-family: var(--font-display); font-size: 1.2rem; font-weight: 700; color: var(--text-primary); }
     
-    .auth-tabs { display: flex; gap: 0.5rem; background: rgba(0,0,0,0.3); padding: 4px; border-radius: 12px; margin-bottom: 1.5rem; border: 1px solid var(--border); }
-    .auth-tab { flex: 1; padding: 0.6rem; background: transparent; border: none; color: var(--text-secondary); font-family: var(--font-display); font-size: 0.75rem; cursor: pointer; border-radius: 8px; transition: 0.2s; }
-    .auth-tab.active { background: var(--primary); color: #000; box-shadow: 0 0 15px var(--primary-glow); }
+    .auth-tabs { display: flex; gap: 0.5rem; background: var(--bg-sidebar); padding: 6px; border-radius: var(--radius-sm); margin-bottom: 1.5rem; border: 1px solid var(--border); }
+    .auth-tab { flex: 1; padding: 0.7rem; background: transparent; border: none; color: var(--text-secondary); font-family: var(--font-display); font-weight: 600; font-size: 0.85rem; cursor: pointer; border-radius: 6px; transition: var(--transition); }
+    .auth-tab.active { background: #ffffff; color: var(--primary); box-shadow: var(--shadow); }
 
     .input-group { margin-bottom: 1.2rem; }
-    .input-group label { display: block; font-family: var(--font-mono); font-size: 0.7rem; color: var(--primary); margin-bottom: 0.4rem; }
-    .input-wrapper { background: rgba(0,0,0,0.3); border: 1px solid var(--border); border-radius: 8px; }
-    .input-wrapper input { width: 100%; padding: 0.8rem 1rem; background: transparent; border: none; color: #fff; font-size: 0.9rem; outline: none; }
+    .input-group label { display: block; font-family: var(--font-display); font-weight: 600; font-size: 0.75rem; color: var(--text-secondary); margin-bottom: 0.5rem; }
+    .input-wrapper { background: #ffffff; border: 1px solid var(--border); border-radius: var(--radius-sm); transition: var(--transition); }
+    .input-wrapper:focus-within { border-color: var(--primary); box-shadow: 0 0 0 3px var(--primary-light); }
+    .input-wrapper input { width: 100%; padding: 0.85rem 1rem; background: transparent; border: none; color: var(--text-primary); font-size: 0.95rem; outline: none; }
+    .input-wrapper input::placeholder { color: var(--text-muted); }
     
-    .submit-btn { width: 100%; padding: 0.9rem; background: var(--primary); border: none; border-radius: 8px; color: #000; font-family: var(--font-display); font-weight: 700; cursor: pointer; transition: 0.3s; margin-top: 0.5rem; }
-    .submit-btn:hover { background: var(--primary-hover); transform: translateY(-2px); box-shadow: 0 5px 15px rgba(0,255,65,0.3); }
+    .submit-btn { width: 100%; padding: 0.95rem; background: var(--text-primary); border: none; border-radius: var(--radius-sm); color: #fff; font-family: var(--font-display); font-weight: 600; cursor: pointer; transition: 0.3s; margin-top: 0.5rem; font-size: 0.95rem; }
+    .submit-btn:hover { background: var(--primary); transform: translateY(-1px); box-shadow: 0 4px 12px var(--primary-glow); }
 
-    .social-divider { display: flex; align-items: center; gap: 1rem; margin: 1.5rem 0; font-family: var(--font-mono); font-size: 0.65rem; color: var(--text-muted); text-transform: uppercase; }
+    .social-divider { display: flex; align-items: center; gap: 1rem; margin: 1.5rem 0; font-family: var(--font-display); font-size: 0.75rem; font-weight: 600; color: var(--text-muted); text-transform: uppercase; }
     .social-divider::before, .social-divider::after { content: ""; flex: 1; height: 1px; background: var(--border); }
 
-    .google-btn { width: 100%; padding: 0.8rem; background: rgba(0,0,0,0.2); border: 1px solid var(--border); border-radius: 8px; color: #fff; display: flex; align-items: center; justify-content: center; gap: 0.8rem; text-decoration: none; font-size: 0.85rem; transition: 0.3s; }
-    .google-btn:hover { background: rgba(0,255,65,0.05); border-color: var(--primary); }
+    .google-btn { width: 100%; padding: 0.85rem; background: #ffffff; border: 1px solid var(--border); border-radius: var(--radius-sm); color: var(--text-primary); display: flex; align-items: center; justify-content: center; gap: 0.8rem; text-decoration: none; font-size: 0.95rem; font-weight: 500; transition: var(--transition); }
+    .google-btn:hover { background: var(--bg-sidebar); border-color: var(--border-active); }
 
     .auth-form { display: none; }
     .auth-form.active { display: block; animation: slideIn 0.3s ease; }
     @keyframes slideIn { from { opacity: 0; transform: translateX(-10px); } to { opacity: 1; transform: translateX(0); } }
 
-    .msg-box { padding: 0.75rem; border-radius: 8px; font-family: var(--font-mono); font-size: 0.75rem; margin-bottom: 1.5rem; display: none; }
+    .msg-box { padding: 0.85rem; border-radius: var(--radius-sm); font-family: var(--font-body); font-weight: 500; font-size: 0.85rem; margin-bottom: 1.5rem; display: none; }
     .msg-box.show { display: block; }
-    .msg-error { background: rgba(255,0,0,0.1); color: #ff5555; border: 1px solid rgba(255,0,0,0.3); }
-    .msg-success { background: rgba(0,255,0,0.1); color: var(--primary); border: 1px solid var(--border); }
+    .msg-error { background: rgba(255,59,48,0.1); color: var(--error); border: 1px solid rgba(255,59,48,0.2); }
+    .msg-success { background: var(--primary-light); color: var(--primary); border: 1px solid var(--primary-glow); }
+
+    .otp-slot { width: 45px !important; height: 55px !important; background: #ffffff !important; border: 1px solid var(--border) !important; color: var(--text-primary) !important; text-align: center; border-radius: var(--radius-sm) !important; font-size: 1.2rem !important; font-weight: bold; margin: 0 0.15rem; transition: var(--transition); }
+    .otp-slot:focus { border-color: var(--primary) !important; outline: none; box-shadow: 0 0 0 3px var(--primary-light); }
 
     @media (max-width: 900px) {
       .login-right { display: none; }
       .login-split-container { max-width: 450px; justify-content: center; }
     }
+
+    @media (max-width: 600px) {
+      .login-split-container {
+        margin: 1rem;
+        height: auto;
+        min-height: 100vh;
+        padding: 1rem 0;
+      }
+      
+      .login-card {
+        padding: 1.5rem;
+        border-radius: 12px;
+      }
+      
+      .terminal-header {
+        margin-bottom: 1.5rem;
+      }
+      
+      .terminal-logo {
+        width: 120px;
+      }
+      
+      .otp-slot {
+        width: 35px !important;
+        height: 45px !important;
+        font-size: 1rem !important;
+      }
+    }
   </style>
 </head>
-<body>
-  <div class="cyber-bg"></div>
-  <div class="scanlines"></div>
-  <div class="particles"><div class="particle"></div><div class="particle"></div><div class="particle"></div><div class="particle"></div><div class="particle"></div></div>
+<body class="data-loaded">
+  <!-- Interactive canvas particles -->
+  <canvas id="fc-canvas-particles" aria-hidden="true"></canvas>
+
+  <!-- Background Effects — Firecrawl-Style Layered BG -->
+  <!-- Layer 1: Gradient blobs -->
+  <div class="fc-bg-blobs"></div>
+  <!-- Layer 2: Grid pattern -->
+  <div class="fc-grid-overlay"></div>
+  <!-- Layer 3: Twinkling dots at grid intersections -->
+  <div class="fc-dots" aria-hidden="true">
+    <span class="fc-dot" style="top:12%;left:8%"></span>
+    <span class="fc-dot" style="top:8%;left:25%"></span>
+    <span class="fc-dot" style="top:18%;left:42%"></span>
+    <span class="fc-dot" style="top:6%;left:58%"></span>
+    <span class="fc-dot" style="top:14%;left:75%"></span>
+    <span class="fc-dot" style="top:10%;left:92%"></span>
+    <span class="fc-dot" style="top:28%;left:16%"></span>
+    <span class="fc-dot" style="top:32%;left:33%"></span>
+    <span class="fc-dot" style="top:24%;left:50%"></span>
+    <span class="fc-dot" style="top:35%;left:66%"></span>
+    <span class="fc-dot" style="top:30%;left:83%"></span>
+    <span class="fc-dot" style="top:45%;left:10%"></span>
+    <span class="fc-dot" style="top:50%;left:25%"></span>
+    <span class="fc-dot" style="top:42%;left:42%"></span>
+    <span class="fc-dot" style="top:55%;left:58%"></span>
+    <span class="fc-dot" style="top:48%;left:75%"></span>
+    <span class="fc-dot" style="top:52%;left:90%"></span>
+    <span class="fc-dot" style="top:65%;left:18%"></span>
+    <span class="fc-dot" style="top:70%;left:35%"></span>
+    <span class="fc-dot" style="top:60%;left:50%"></span>
+    <span class="fc-dot" style="top:72%;left:66%"></span>
+    <span class="fc-dot" style="top:68%;left:82%"></span>
+    <span class="fc-dot" style="top:80%;left:8%"></span>
+    <span class="fc-dot" style="top:85%;left:25%"></span>
+    <span class="fc-dot" style="top:78%;left:42%"></span>
+    <span class="fc-dot" style="top:88%;left:58%"></span>
+    <span class="fc-dot" style="top:82%;left:75%"></span>
+    <span class="fc-dot" style="top:90%;left:92%"></span>
+  </div>
+  <!-- Layer 4: Floating status labels -->
+  <div class="fc-float-labels" aria-hidden="true">
+    <span class="fc-label" style="top:9%;left:5%">[ ENHANCE ]</span>
+    <span class="fc-label" style="top:15%;right:8%">[ 9.2/10 ]</span>
+    <span class="fc-label" style="top:35%;left:3%">[ PIPELINE ]</span>
+    <span class="fc-label" style="top:28%;right:4%">[ .JSON ]</span>
+    <span class="fc-label" style="top:55%;left:6%">[ GEMINI ]</span>
+    <span class="fc-label" style="top:60%;right:6%">[ 200 OK ]</span>
+    <span class="fc-label" style="top:75%;left:4%">[ SCRAPE ]</span>
+    <span class="fc-label" style="top:80%;right:5%">[ MASTER ]</span>
+    <span class="fc-label" style="top:45%;right:2%">[ v2.0 ]</span>
+    <span class="fc-label" style="top:92%;left:8%">[ SCORE ]</span>
+  </div>
+  <!-- Layer 5: Background ghost code -->
+  <div class="fc-ghost-code" aria-hidden="true">
+    <pre>{
+  "prompt": "Write a blog post about AI",
+  "enhanced": "Create a well-structured ...",
+  "model": "gemini-2.0",
+  "quality": {
+    "overall": 9.2,
+    "clarity": 9.5,
+    "specificity": 8.8,
+    "structure": 9.4,
+    "context": 9.0,
+    "constraints": 9.1
+  },
+  "improvement": "+42 quality pts",
+  "pipeline_stages": 9,
+  "fallback": ["nvidia", "kimi"],
+  "status": "200 OK",
+  "timestamp": "2026-04-16T01:10:00Z"
+}</pre>
+  </div>
+  <!-- Layer 6: Edge vignette glow -->
+  <div class="fc-vignette"></div>
+  <!-- Layer 7: PromptX spark brand marks -->
+  <div class="fc-sparks" aria-hidden="true">
+    <span class="fc-spark" style="top:20%;left:22%">✦</span>
+    <span class="fc-spark" style="top:40%;right:18%">✦</span>
+    <span class="fc-spark" style="top:65%;left:30%">✦</span>
+    <span class="fc-spark" style="top:85%;right:25%">✦</span>
+    <span class="fc-spark" style="top:50%;left:60%">✦</span>
+  </div>
 
   <div class="login-split-container">
     <!-- Left: Login UI -->
     <div class="login-left">
       <div class="login-card">
         <div class="terminal-header">
-          <img src="/Public/bot-img.png" alt="Logo" class="terminal-logo">
-          <h1>PROMPTX</h1>
-          <p style="font-family: var(--font-mono); font-size: 0.7rem; color: var(--text-muted);">[ STATUS: SECURE_LINK_READY ]</p>
+          <img src="/Public/PROMPTX-banner.png" alt="Logo" class="terminal-logo" style="width: 100%; max-width: 350px; height: auto;">
         </div>
 
         <div id="error-box" class="msg-box msg-error"></div>
@@ -317,7 +417,12 @@
             successBox.classList.add('show');
             setTimeout(() => window.location.href = '/choose/', 1000);
           } else {
-            successBox.textContent = 'IDENTITY CREATED. VERIFY OTP.';
+            // Show demo OTP if available (for testing)
+            if (result.demo_otp) {
+              successBox.innerHTML = `IDENTITY CREATED. OTP: <strong>${result.demo_otp}</strong> (Check console too)`;
+            } else {
+              successBox.textContent = 'IDENTITY CREATED. VERIFY OTP.';
+            }
             successBox.classList.add('show');
             
             // Show OTP Screen
@@ -326,6 +431,15 @@
             document.getElementById('auth-tabs-container').style.display = 'none';
             document.getElementById('social-divider').style.display = 'none';
             document.getElementById('google-btn').style.display = 'none';
+            
+            // Auto-fill OTP if demo
+            if (result.demo_otp) {
+              const otpSlots = document.querySelectorAll('.otp-slot');
+              const otpStr = result.demo_otp.toString();
+              otpSlots.forEach((slot, idx) => {
+                if (otpStr[idx]) slot.value = otpStr[idx];
+              });
+            }
           }
         } else {
           errorBox.textContent = result.error || 'UNAUTHORIZED ACCESS';
@@ -382,5 +496,6 @@
       });
     });
   </script>
+  <script src="/scripts/index.js"></script>
 </body>
 </html>
