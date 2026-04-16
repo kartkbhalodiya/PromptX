@@ -78,6 +78,7 @@ _GREETING_PATTERNS = {
 _DEEP_RESEARCH_SIGNALS = [
     'build a', 'build an', 'create a', 'create an', 'make a', 'make an',
     'develop a', 'develop an', 'design a', 'design an',
+    'bulid', 'i want to bulid', 'i want to build', 'how to build', 'how do i build',
     'like flipkart', 'like amazon', 'like uber', 'like airbnb', 'like netflix',
     'like instagram', 'like twitter', 'like facebook', 'like youtube',
     'like whatsapp', 'like linkedin', 'like shopify', 'like stripe',
@@ -85,11 +86,25 @@ _DEEP_RESEARCH_SIGNALS = [
     'full website', 'full app', 'full stack', 'full-stack',
     'complete website', 'complete app', 'complete system',
     'e-commerce', 'ecommerce', 'marketplace', 'social media platform',
-    'how to build', 'how do i build', 'how to create', 'how to develop',
+    'ai agent', 'how to create', 'how to develop',
     'architecture for', 'system design', 'tech stack for',
     'explain in detail', 'explain deeply', 'deep dive', 'in depth',
     'comprehensive guide', 'step by step guide', 'complete guide',
-    'everything about', 'tell me everything',
+    'everything about', 'tell me everything', 'details', 'give details',
+    'how it works', 'how does', 'how do', 'explain', 'what is the architecture',
+    'step by step', 'explain step by step', 'how chatgpt work', 'how chat gpt work',
+    'diagram', 'diagam', 'diagrram', 'architecture', 'visualize', 'draw a', 'show me a',
+    'flowchart', 'structure of', 'breakdown of', 'hoe it work', 'hoe does'
+]
+
+# Signals that the user wants idea generation
+_IDEA_SIGNALS = [
+    'suggest me', 'give me ideas', 'business idea', 'project idea',
+    'startup idea', 'side hustle', 'make money', 'how to make money',
+    'money making', 'income idea', 'passive income', 'high grossing',
+    'best idea', 'new idea', 'innovation', 'entrepreneur',
+    'i want to start', 'i want to build', 'what business',
+    'profitable business', 'lucrative', 'most profitable',
 ]
 
 def _is_greeting(text: str) -> bool:
@@ -103,13 +118,16 @@ def _needs_deep_research(text: str) -> bool:
     """Detect if the user wants a comprehensive deep-dive answer, not just a prompt rewrite."""
     lower = text.lower()
     signal_count = sum(1 for s in _DEEP_RESEARCH_SIGNALS if s in lower)
-    # Trigger deep research if 2+ signals OR the prompt is asking to build something complex
-    if signal_count >= 2:
-        return True
-    # Single strong signal + sufficient length
-    if signal_count >= 1 and len(text.split()) >= 8:
+    # Trigger deep research more eagerly
+    trigger_words = ['build', 'bulid', 'create', 'make', 'agent', 'app', 'website', 'clone', 'system', 'explain', 'details', 'how']
+    if signal_count >= 1 or any(f" {w} " in f" {lower} " for w in trigger_words):
         return True
     return False
+
+def _needs_ideas(text: str) -> bool:
+    """Detect if the user wants idea generation."""
+    lower = text.lower()
+    return any(signal in lower for signal in _IDEA_SIGNALS)
 
 _URL_PATTERN = re.compile(r'https?://[^\s<>"\']+|www\.[^\s<>"\']+', re.IGNORECASE)
 
@@ -117,6 +135,150 @@ def _extract_urls(text: str) -> list:
     """Extract all URLs from a text string."""
     urls = _URL_PATTERN.findall(text)
     return [u if u.startswith('http') else f'https://{u}' for u in urls]
+
+
+# ============================================================================
+# SHARED WEBSITE ANALYSIS PROMPT BUILDER
+# ============================================================================
+
+def build_website_analysis_prompt(user_question, site_name, url,
+                                   pages_scraped, total_chars,
+                                   pages_summary, scraped_content, search_context):
+    return f"""You are a world-class senior software architect, product analyst, reverse-engineer, and technical writer.
+
+You have scraped {pages_scraped} pages ({total_chars:,} chars) from "{site_name}" ({url}) and gathered web search intelligence.
+User question: "{user_question}"
+
+DATA:
+PAGES: {pages_summary}
+CONTENT: {scraped_content}
+WEB SEARCH: {search_context}
+
+Produce a COMPLETE expert analysis. Cover every section below. Do NOT skip any. Minimum 3000 words.
+
+---
+
+## 🌐 1. WEBSITE OVERVIEW
+- What this product is, core value proposition, target audience, business model
+- Company stage, geographic focus, market positioning
+
+## ✨ 2. COMPLETE FEATURE LIST
+List EVERY feature found. Group by category. For each: name, what it does, where found, priority (Core/Secondary/Premium).
+Categories: Core Product · User Auth · Dashboard · Search · Payments · Notifications · Admin Panel · Analytics · Mobile · Security · Developer Tools · Integrations
+
+## 🏗️ 3. TECHNICAL ARCHITECTURE
+- Frontend: framework, UI library, state management
+- Backend: language, framework, API style
+- Database: primary DB, cache, search engine
+- Infrastructure: cloud, CDN, containers
+- Auth: OAuth providers, SSO, 2FA
+- Payments: gateways detected
+- Analytics & monitoring tools
+- Every third-party API/service with evidence
+
+## 🔌 4. APIs & INTEGRATIONS TABLE
+| Integration | Type | Purpose | Evidence |
+|-------------|------|---------|----------|
+
+## 📡 5. DEVELOPER / PUBLIC API
+- Public API endpoints documented, auth method, rate limits, webhooks, SDK languages
+
+## 🎨 6. UX & DESIGN
+- Navigation structure, key user flows, design system, accessibility, performance optimisations
+
+## 📊 7. BUSINESS INTELLIGENCE
+- Exact pricing tiers, free trial details, enterprise offering, differentiators, growth signals
+
+## 🔐 8. SECURITY
+- Auth methods, certifications (SOC2/GDPR/HIPAA), data handling, security features
+
+---
+
+# 🏗️ HOW TO BUILD THIS — COMPLETE STEP-BY-STEP GUIDE
+
+## RECOMMENDED TECH STACK
+| Layer | Technology | Why Choose It |
+|-------|-----------|--------------|
+
+## DEVELOPMENT PHASES
+- **Phase 1 — MVP (Weeks 1–8):** Core features only
+- **Phase 2 — Growth (Months 3–5):** Scaling + secondary features
+- **Phase 3 — Scale (Months 6–12):** Enterprise + advanced features
+
+## TEAM & COST ESTIMATE
+- Team roles, seniority, headcount
+- Dev cost range, monthly infra cost at 3 scale levels
+
+## TOP 5 HARDEST CHALLENGES
+What makes this hard to build and how to solve each one.
+
+---
+
+# 🤖 AI AGENT READY PROMPTS — COPY & USE DIRECTLY
+
+> These prompts are engineered to be pasted directly into any AI coding agent (Cursor, GitHub Copilot, Claude, ChatGPT, Gemini). Each prompt is self-contained and detailed enough to build that exact feature without bugs.
+
+For EACH major feature/page found on this website, generate one prompt block in this exact format:
+
+---
+### 🔧 [FEATURE NAME]
+
+**What it is:** [1 sentence description from the website]
+
+**AI Agent Prompt:**
+```
+You are an expert full-stack developer. Build the [FEATURE NAME] for a [site_name]-like web application.
+
+TECH STACK: [specific stack from section 3 above]
+
+REQUIREMENTS:
+[List every requirement for this feature — be exhaustive. Include:]
+- Exact UI layout and components needed
+- All API endpoints required (method, path, request body, response shape)
+- Database schema (table name, all columns with types and constraints)
+- Business logic rules (validation, edge cases, error handling)
+- Authentication/authorization rules
+- Third-party integrations needed (with exact API calls)
+- Performance requirements
+- Mobile responsiveness rules
+
+ACCEPTANCE CRITERIA:
+[List specific, testable criteria — the feature is done when ALL of these pass]
+
+DO NOT:
+- Use placeholder data or TODO comments
+- Skip error handling
+- Ignore mobile responsiveness
+- Use deprecated libraries
+
+OUTPUT: Production-ready code with no bugs. Include all files needed.
+```
+---
+
+Generate one such prompt block for EACH of these features (based on what you found on the site):
+1. Home Page / Landing Page
+2. User Registration & Login (with OAuth if detected)
+3. Main Dashboard / Core Product Page
+4. Search & Filter System (if present)
+5. Payment & Checkout Flow (if present)
+6. Product/Item Listing Page (if e-commerce)
+7. Product/Item Detail Page (if e-commerce)
+8. User Profile & Settings
+9. Admin Panel / Dashboard
+10. Notifications System
+11. API Integration Layer
+12. Any other major feature unique to this site
+
+For each prompt: be EXTREMELY specific. Reference the actual site name, actual features found, actual tech stack. The prompt must be detailed enough that an AI agent can build it without asking any follow-up questions.
+
+---
+
+FORMATTING RULES:
+- Use rich markdown throughout
+- Every section must be complete — no placeholders
+- Reference actual content from the scraped pages
+- The AI Agent prompts must be inside triple-backtick code blocks so they are easy to copy
+- Do NOT say "I cannot determine" — infer and label as inferred"""
 
 
 @csrf_exempt
@@ -140,7 +302,10 @@ def enhance_view(request):
             return JsonResponse({'error': f'Prompt too long: {len(prompt)} chars'}, status=400)
 
         preferred_model = data.get('model')
-        model_arg = preferred_model if preferred_model in ('gemini', 'groq') else None
+        model_arg = preferred_model if preferred_model in ('gemini_flash', 'gemini_flash_8b', 'gemini_pro', 'nvidia_minimax', 'groq') else None
+        
+        # User-provided API Key from headers
+        api_key = request.headers.get('X-API-Key')
 
         # ── 1. Greeting → welcome response ───────────────────────────────────
         if _is_greeting(prompt):
@@ -149,7 +314,7 @@ def enhance_view(request):
                 f"The user just said: \"{prompt}\"\n\n"
                 f"Respond with a warm, helpful welcome message."
             )
-            result = generate_with_fallback(welcome_prompt, max_tokens=600, preferred_model=model_arg)
+            result = generate_with_fallback(welcome_prompt, max_tokens=600, preferred_model=model_arg, api_key=api_key)
             return JsonResponse({
                 'success': True,
                 'type': 'welcome',
@@ -160,6 +325,48 @@ def enhance_view(request):
                 'enhanced_score': {'total': 0, 'percentage': 0, 'quality': 'N/A'},
                 'improvement': 0,
                 'classification': {'category': 'greeting', 'confidence': 1.0},
+            })
+
+        # ── 1.5. Idea generation request → generate ideas ───────────────────
+        if _needs_ideas(prompt):
+            logger.info(f"Idea generation triggered for: {prompt[:80]}...")
+            from enhancer.core.idea_generator import IdeaGenerator
+            generator = IdeaGenerator()
+            result = generator.generate(prompt, quantity=5)
+            
+            # Build a comprehensive response with AI enhancement
+            ideas_text = "\n\n".join([
+                f"## {i+1}. {idea.get('title', 'Untitled')}\n"
+                f"**Description:** {idea.get('description', 'N/A')}\n"
+                + (f"**Market Size:** {idea.get('market_size', '')}\n" if idea.get('market_size') else "")
+                + (f"**Revenue Potential:** {idea.get('revenue_potential', idea.get('income_potential', ''))}\n" if idea.get('revenue_potential') or idea.get('income_potential') else "")
+                + (f"**Startup Cost:** {idea.get('startup_cost', '')}\n" if idea.get('startup_cost') else "")
+                + (f"**Time to Revenue:** {idea.get('time_to_revenue', '')}\n" if idea.get('time_to_revenue') else "")
+                + (f"**Difficulty:** {idea.get('difficulty', '')}\n" if idea.get('difficulty') else "")
+                + (f"**Skills Needed:** {', '.join(idea.get('skills_needed', []))}\n" if idea.get('skills_needed') else "")
+                + (f"**Tech Stack:** {', '.join(idea.get('tech_stack', []))}\n" if idea.get('tech_stack') else "")
+                + (f"**Features:** {', '.join(idea.get('features', []))}\n" if idea.get('features') else "")
+                + (f"**Use Cases:** {', '.join(idea.get('use_cases', []))}\n" if idea.get('use_cases') else "")
+                + (f"**Tools Needed:** {idea.get('tools_needed', '')}\n" if idea.get('tools_needed') else "")
+                + (f"**Time Investment:** {idea.get('time_investment', '')}\n" if idea.get('time_investment') else "")
+                for i, idea in enumerate(result.ideas)
+            ])
+            
+            enhanced = f"# 💡 Business & Project Ideas\n\n{ideas_text}\n\n---\n*Generated by PromptX Idea Generator*"
+            
+            return JsonResponse({
+                'success': True,
+                'type': 'ideas',
+                'original': prompt,
+                'enhanced': enhanced,
+                'category': result.category,
+                'total_ideas': result.total_ideas,
+                'ideas': result.ideas,
+                'model': 'local_generator',
+                'classification': {'category': 'idea', 'confidence': 1.0},
+                'original_score': score_prompt(prompt),
+                'enhanced_score': score_prompt(enhanced),
+                'improvement': 0,
             })
 
         # ── 2. URL in prompt → deep multi-page scrape + web search ──────────
@@ -183,49 +390,12 @@ def enhance_view(request):
 
             if crawl['success']:
                 pages_list = '\n'.join(f"  • {p['title']} — {p['url']}" for p in crawl['pages'])
-                url_analysis_prompt = f"""You are a world-class product analyst and full-stack architect.
-
-The user shared this website and said: "{prompt}"
-
-You have scraped {crawl['pages_scraped']} pages of the site and gathered web search intelligence.
-Provide a deep, exhaustive analysis.
-
-SCRAPED PAGES:
-{pages_list}
-
-FULL CONTENT ({crawl['total_chars']:,} chars):
-{crawl['combined_text'][:28000]}
-
-WEB SEARCH RESULTS:
-{search_text}
-
-Provide a complete analysis:
-
-## 🌐 What This Website Is
-Product, audience, business model, value proposition.
-
-## ✨ Complete Feature List
-Every feature found across all pages, grouped by category with priority labels.
-
-## 🏗️ Tech Stack & Architecture (inferred + from search)
-Frontend, backend, database, hosting, CDN, auth, payments, analytics.
-List every third-party API/service detected with evidence.
-
-## 🔌 APIs & Integrations
-Table of every API, SDK, or integration found.
-
-## 📊 Business Intelligence
-Pricing, tiers, growth signals, competitive positioning.
-
-## 🚀 How to Build Something Like This
-Full tech stack recommendation, key components, timeline, team size, cost estimate.
-
-## ⚠️ Key Challenges
-The hardest parts to build and common mistakes to avoid.
-
-Use rich markdown. Be specific. Reference actual content from the pages."""
-
-                result = generate_with_fallback(url_analysis_prompt, max_tokens=6000, preferred_model=model_arg)
+                url_analysis_prompt = build_website_analysis_prompt(
+                    prompt, site_name, url,
+                    crawl['pages_scraped'], crawl['total_chars'],
+                    pages_list, crawl['combined_text'][:28000], search_text
+                )
+                result = generate_with_fallback(url_analysis_prompt, max_tokens=8000, preferred_model=model_arg, api_key=api_key)
                 classification = classify_prompt(prompt)
                 return JsonResponse({
                     'success': True,
@@ -248,13 +418,30 @@ Use rich markdown. Be specific. Reference actual content from the pages."""
                 logger.warning(f"Crawl failed for {url}: {crawl['error']}")
                 fallback_prompt = (
                     f"The user wants to analyze: {url}\n"
-                    f"Scraping failed: {crawl['error']}\n\n"
+                    f"Scraping the live content failed ({crawl['error']}) because the site blocks scrapers.\n\n"
                     f"Web search results:\n{search_text}\n\n"
-                    f"Based on the URL and search results, provide what you know about "
-                    f"this website/product and what someone would need to build something similar.\n"
-                    f"User's message: {prompt}"
+                    f"User's message: {prompt}\n\n"
+                    f"Based on the URL, the search results, and your deep internal knowledge about this established platform, provide a COMPLETE expert analysis and technical breakdown.\n"
+                    f"FORMATTING RULE: You MUST use Markdown headers (##) for sections and bullet points for all lists.\n\n"
+                    f"Include exactly these sections:\n\n"
+                    f"## 🌐 1. PLATFORM OVERVIEW\n"
+                    f"- What this product is, core value proposition, and business model\n\n"
+                    f"## ✨ 2. DEEP FEATURE BREAKDOWN\n"
+                    f"List exhaustive features with bullet points. specifically detail:\n"
+                    f"- Core e-commerce/platform features (e.g., Cart, Checkout, Search)\n"
+                    f"- Admin Panel & Dashboard capabilities\n"
+                    f"- Multi-vendor / Seller panel features\n"
+                    f"- User account management & tracking\n\n"
+                    f"## 🏗️ 3. TECHNICAL ARCHITECTURE\n"
+                    f"Break down the tech stack using bullet points:\n"
+                    f"- **Backend:** Tech name (e.g., Node.js, Java, Go) and framework\n"
+                    f"- **Frontend:** (e.g., React, Next.js)\n"
+                    f"- **Databases & Caching:** (e.g., PostgreSQL, Redis)\n"
+                    f"- **Infrastructure & APIs:**\n\n"
+                    f"## 🚀 HOW TO BUILD THIS\n"
+                    f"Provide a step-by-step development phase guide to building a clone of this."
                 )
-                result = generate_with_fallback(fallback_prompt, max_tokens=3000, preferred_model=model_arg)
+                result = generate_with_fallback(fallback_prompt, max_tokens=3000, preferred_model=model_arg, api_key=api_key)
                 return JsonResponse({
                     'success': True,
                     'type': 'url_analysis',
@@ -289,7 +476,7 @@ Request: "{prompt}"
 
 Respond in 3-5 sentences, very concisely. This is an internal analysis step."""
 
-            analysis_result = generate_with_fallback(analysis_prompt, max_tokens=400, preferred_model=model_arg)
+            analysis_result = generate_with_fallback(analysis_prompt, max_tokens=400, preferred_model=model_arg, api_key=api_key)
             analysis_text = analysis_result['text']
 
             # Pass 2: Generate the full deep-dive answer using the analysis
@@ -303,7 +490,7 @@ Respond in 3-5 sentences, very concisely. This is an internal analysis step."""
                 f"Be extremely detailed. Do not skip any section. Minimum 2000 words."
             )
 
-            result = generate_with_fallback(deep_prompt, max_tokens=8000, preferred_model=model_arg)
+            result = generate_with_fallback(deep_prompt, max_tokens=8000, preferred_model=model_arg, api_key=api_key)
             enhanced = result['text']
             model_used = result['model']
 
@@ -314,9 +501,15 @@ Respond in 3-5 sentences, very concisely. This is an internal analysis step."""
             logger.info(f"Deep research completed for [{classification['category']}] via {model_used}")
             return JsonResponse({
                 'success': True,
-                'type': 'deep_research',
+                'type': 'url_analysis',  # We send this as url_analysis to reuse the same gorgeous UI template
                 'original': prompt,
                 'enhanced': enhanced,
+                'url': "System Design Request",
+                'page_title': classification['category'].capitalize() + " Architecture",
+                'pages_scraped': 0,
+                'total_chars': len(enhanced),
+                'pages': [],
+                'scrape_error': None,
                 'analysis': analysis_text,
                 'classification': classification,
                 'original_score': original_score,
@@ -348,7 +541,7 @@ Respond in 3-5 sentences, very concisely. This is an internal analysis step."""
             f"User prompt to enhance:\n{prompt}"
         )
 
-        result = generate_with_fallback(full_prompt, max_tokens=3000, preferred_model=model_arg)
+        result = generate_with_fallback(full_prompt, max_tokens=2000, preferred_model=model_arg, api_key=api_key)
         enhanced = result['text']
         model_used = result['model']
         enhanced_score = score_prompt(enhanced)
@@ -367,9 +560,10 @@ Respond in 3-5 sentences, very concisely. This is an internal analysis step."""
         })
 
     except Exception as e:
-        logger.error(f"Error in enhance endpoint: {str(e)}")
+        import traceback
+        logger.error(f"Error in enhance endpoint: {str(e)}\n{traceback.format_exc()}")
         return JsonResponse(
-            {'error': 'An internal server error occurred.', 'success': False},
+            {'error': f'An internal server error occurred: {str(e)}', 'success': False},
             status=500
         )
 
@@ -469,7 +663,12 @@ def ab_test_view(request):
         if not prompt:
             return JsonResponse({'error': 'Prompt is empty or invalid'}, status=400)
         
-        variations = generate_ab_variations(prompt)
+        api_key = request.headers.get('X-API-Key')
+        
+        preferred_model = data.get('model')
+        model_arg = preferred_model if preferred_model in ('gemini_flash', 'gemini_flash_8b', 'gemini_pro', 'nvidia_minimax', 'groq') else None
+
+        variations = generate_ab_variations(prompt, preferred_model=model_arg, api_key=api_key)
         
         # Optionally include comparison
         if data.get('include_comparison', True):
@@ -518,7 +717,8 @@ def analyze_url_view(request):
 
         question = sanitize_input(data.get('question', '').strip()) or \
                    'Give a complete deep analysis of this website.'
-        model_arg = data.get('model') if data.get('model') in ('gemini', 'groq') else None
+        model_arg = data.get('model') if data.get('model') in ('gemini_flash', 'gemini_flash_8b', 'gemini_pro', 'nvidia_minimax', 'groq') else None
+        api_key = request.headers.get('X-API-Key')
 
         from urllib.parse import urlparse
         domain = urlparse(url).netloc.replace('www.', '')
@@ -569,142 +769,14 @@ def analyze_url_view(request):
             search_context = '\n\n'.join(parts)
 
         # ── Step 3: Build the mega-analysis prompt ────────────────────────
-        analysis_prompt = f"""You are a world-class senior software architect, product analyst, reverse-engineer, and technical writer.
+        analysis_prompt = build_website_analysis_prompt(
+            question, site_name, url,
+            crawl['pages_scraped'], crawl['total_chars'],
+            pages_summary, crawl['combined_text'][:35000],
+            search_context if search_context else '(No additional search results available)'
+        )
 
-You have been given:
-1. Full scraped content from {crawl['pages_scraped']} pages of the website "{site_name}" ({url})
-2. Web search results about its tech stack, APIs, and documentation
-
-Your job: produce the most comprehensive, detailed, expert-level analysis possible.
-The user's specific question: "{question}"
-
-═══════════════════════════════════════════════════════════════
-SCRAPED PAGES ({crawl['pages_scraped']} pages, {crawl['total_chars']:,} total chars):
-{pages_summary}
-
-FULL SCRAPED CONTENT:
-{crawl['combined_text'][:35000]}
-
-═══════════════════════════════════════════════════════════════
-WEB SEARCH INTELLIGENCE:
-{search_context if search_context else '(No additional search results available)'}
-
-═══════════════════════════════════════════════════════════════
-NOW PRODUCE THE COMPLETE ANALYSIS — cover ALL sections below:
-
-## 🌐 1. WEBSITE OVERVIEW
-- What this product/service is in precise terms
-- Core value proposition (what problem it solves)
-- Target audience (primary and secondary users)
-- Business model (freemium / SaaS / marketplace / ads / etc.)
-- Company/product stage (startup / scale-up / enterprise)
-- Geographic focus and market positioning
-
-## ✨ 2. COMPLETE FEATURE LIST
-List EVERY feature you can identify, grouped by category. For each feature include:
-- Feature name
-- What it does (1-2 sentences)
-- Which page/section it was found on
-- Priority estimate (Core / Secondary / Premium)
-
-Categories to cover: Core Product, User Management & Auth, Dashboard/UI, 
-Integrations & APIs, Analytics & Reporting, Admin Panel, Mobile, 
-Notifications, Search, Payments, Security, Developer Tools
-
-## 🏗️ 3. TECHNICAL ARCHITECTURE (INFERRED)
-Based on scraped content AND web search results:
-- **Frontend**: Framework (React/Vue/Angular/Next.js?), UI library, state management
-- **Backend**: Language, framework, API style (REST/GraphQL/gRPC)
-- **Database**: Primary DB, caching (Redis?), search engine (Elasticsearch?)
-- **Infrastructure**: Cloud provider (AWS/GCP/Azure?), CDN, containerisation
-- **Authentication**: OAuth providers, SSO, 2FA methods
-- **Payments**: Payment gateway(s) detected
-- **Analytics**: Tracking tools, monitoring, error reporting
-- **Third-party APIs**: Every external service/API mentioned or inferred
-- **Mobile**: Native app / PWA / React Native?
-- Evidence for each inference (quote from scraped content or search result)
-
-## 🔌 4. APIs & INTEGRATIONS DETECTED
-List every API, SDK, or third-party integration you can identify:
-| Integration | Type | Purpose | Evidence |
-|-------------|------|---------|----------|
-(fill in the table)
-
-## 📡 5. DEVELOPER / API DOCUMENTATION
-- Does this site have a public API? What endpoints are documented?
-- SDK availability (languages supported)
-- Authentication method for their API (API key / OAuth / JWT)
-- Rate limits mentioned
-- Webhook support
-- Developer portal URL if found
-
-## 🎨 6. UX & DESIGN ANALYSIS
-- Navigation structure and information architecture
-- Key user flows (signup → onboarding → core action)
-- Design system observations (component library, colour scheme, typography)
-- Accessibility features noticed
-- Performance optimisations visible (lazy loading, CDN assets, etc.)
-- Mobile responsiveness approach
-
-## 📊 7. BUSINESS & PRODUCT INTELLIGENCE
-- Pricing model and tiers (exact prices if found)
-- Free trial / freemium details
-- Enterprise offering
-- Key differentiators vs competitors
-- Growth signals (customer count, testimonials, case studies found)
-- SEO strategy visible from content
-
-## 🔐 8. SECURITY OBSERVATIONS
-- Authentication methods (SSO, 2FA, OAuth providers)
-- Security certifications mentioned (SOC2, ISO27001, GDPR, HIPAA)
-- Data handling and privacy approach
-- Security features for users (audit logs, permissions, etc.)
-
-## 🚀 9. HOW TO BUILD SOMETHING SIMILAR — COMPLETE GUIDE
-### Recommended Tech Stack
-| Layer | Technology | Why |
-|-------|-----------|-----|
-(fill in the table)
-
-### Core Components to Build
-For each component: name, description, estimated complexity (days), key libraries
-
-### Development Phases
-- **Phase 1 — MVP (4-8 weeks)**: Minimum features to launch
-- **Phase 2 — Growth (2-4 months)**: Scaling features
-- **Phase 3 — Scale (6-12 months)**: Enterprise features
-
-### Team Required
-- Roles needed, seniority level, estimated headcount
-
-### Estimated Cost
-- Development cost range
-- Monthly infrastructure cost at different scales
-
-## ⚠️ 10. KEY CHALLENGES & WHAT MAKES THIS HARD
-- The 5 hardest technical problems to solve
-- Common mistakes teams make building this type of product
-- Regulatory/compliance challenges
-- Scaling bottlenecks to plan for
-
-## 💡 11. ACTIONABLE RECOMMENDATIONS
-If the user wants to build something like this:
-- The 3 most important things to get right from day 1
-- What to build vs what to buy (use existing services for)
-- Open-source alternatives to study
-- Specific libraries/frameworks to use for each major feature
-
-═══════════════════════════════════════════════════════════════
-FORMATTING RULES:
-- Use rich markdown: ## headers, **bold**, `code`, tables, bullet lists
-- Be SPECIFIC — reference actual content found on the pages
-- Use tables wherever comparison or listing is involved
-- Include actual URLs, product names, and technical terms found
-- Minimum length: 3000 words
-- Do NOT skip any section
-- Do NOT say "I cannot determine" — make educated inferences and label them as such"""
-
-        result = generate_with_fallback(analysis_prompt, max_tokens=8000, preferred_model=model_arg)
+        result = generate_with_fallback(analysis_prompt, max_tokens=8000, preferred_model=model_arg, api_key=api_key)
 
         logger.info(
             f"Deep URL analysis complete: {url} | "
@@ -751,7 +823,8 @@ def web_search_view(request):
         if not query:
             return JsonResponse({'error': 'Search query is required'}, status=400)
 
-        model_arg = data.get('model') if data.get('model') in ('gemini', 'groq') else None
+        model_arg = data.get('model') if data.get('model') in ('gemini_flash', 'gemini_flash_8b', 'gemini_pro', 'nvidia_minimax', 'groq') else None
+        api_key = request.headers.get('X-API-Key')
 
         logger.info(f"Web search: {query}")
         results = web_search(query, max_results=6)
@@ -791,7 +864,7 @@ Any important context, caveats, or related information worth knowing.
 
 Be factual, specific, and cite which results support each point."""
 
-        result = generate_with_fallback(synthesis_prompt, max_tokens=2000, preferred_model=model_arg)
+        result = generate_with_fallback(synthesis_prompt, max_tokens=2000, preferred_model=model_arg, api_key=api_key)
 
         return JsonResponse({
             'success': True,
@@ -804,4 +877,47 @@ Be factual, specific, and cite which results support each point."""
 
     except Exception as e:
         logger.error(f"Error in web-search endpoint: {str(e)}")
+        return JsonResponse({'error': 'An internal server error occurred.', 'success': False}, status=500)
+# ============================================================================
+# IDEA GENERATION ENDPOINT
+# ============================================================================
+
+@csrf_exempt
+@require_http_methods(["POST"])
+@ratelimit(key='ip', rate='20/m', block=True)
+def ideas_view(request):
+    """
+    Generate business, project, and money-making ideas.
+    Body: { prompt: string, category?: string, quantity?: number }
+    """
+    try:
+        data, err = _parse_json(request)
+        if err:
+            return err
+
+        prompt = sanitize_input((data.get('prompt') or '').strip())
+        if not prompt:
+            return JsonResponse({'error': 'Prompt is required'}, status=400)
+
+        category = data.get('category')  # business, side_hustle, coding, hacking, startup
+        quantity = min(int(data.get('quantity', 5)), 10)  # Max 10 ideas
+
+        # Import and use the idea generator
+        from enhancer.core.idea_generator import IdeaGenerator
+        generator = IdeaGenerator()
+        
+        result = generator.generate(prompt, category=category, quantity=quantity)
+
+        logger.info(f"Ideas generated for {_get_client_ip(request)}: {result.category}")
+        return JsonResponse({
+            'success': True,
+            'type': 'ideas',
+            'category': result.category,
+            'total_ideas': result.total_ideas,
+            'ideas': result.ideas,
+            'processing_time_ms': result.processing_time_ms,
+        })
+
+    except Exception as e:
+        logger.error(f"Error in ideas endpoint: {str(e)}")
         return JsonResponse({'error': 'An internal server error occurred.', 'success': False}, status=500)

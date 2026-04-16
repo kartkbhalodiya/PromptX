@@ -42,59 +42,100 @@ class AIModelFallback:
     
     def __init__(self):
         self.models = [
-            {'name': 'gemini', 'priority': 1},
-            {'name': 'groq',   'priority': 2},
+            {'name': 'gemini_flash', 'priority': 1},
+            {'name': 'gemini_flash_8b', 'priority': 2},
+            {'name': 'gemini_pro', 'priority': 3},
+            {'name': 'nvidia_minimax', 'priority': 4},
+            {'name': 'groq', 'priority': 5},
         ]
     
-    def generate(self, prompt, max_tokens=2000, preferred_model=None):
-        """Try models in order until one succeeds."""
+    def generate(self, prompt, max_tokens=2000, preferred_model=None, api_key=None):
+        """Try models in order until one succeeds. If preferred_model is explicitly set, ONLY use that model."""
         errors = []
         
-        if preferred_model:
-            model_order = [m for m in self.models if m['name'] == preferred_model]
-            model_order += [m for m in self.models if m['name'] != preferred_model]
-        else:
-            model_order = self.models
-        
-        for model in model_order:
+        # If user explicitly chose a model, ONLY use that model (no fallback)
+        if preferred_model and preferred_model != 'auto' and preferred_model in [m['name'] for m in self.models]:
             try:
-                result = self._call_model(model['name'], prompt, max_tokens)
+                result = self._call_model(preferred_model, prompt, max_tokens, api_key=api_key)
+                if result:
+                    return {'text': result, 'model': preferred_model, 'success': True}
+            except Exception as e:
+                # When user explicitly selects a model, don't fallback - just fail with clear error
+                raise Exception(f"Selected model '{preferred_model}' failed: {str(e)}")
+        
+        # Auto mode: Try all models in fallback order
+        for model in self.models:
+            try:
+                result = self._call_model(model['name'], prompt, max_tokens, api_key=api_key)
                 if result:
                     return {'text': result, 'model': model['name'], 'success': True}
             except Exception as e:
                 errors.append(f"{model['name']}: {str(e)}")
                 continue
         
+        # Check if all errors are quota-related
+        if all('429' in str(e) or 'quota' in str(e).lower() or 'resource_exhausted' in str(e).lower() for e in errors):
+            raise Exception(
+                "⚠️ QUOTA EXCEEDED: All Gemini models have hit their daily free tier limit. "
+                "Solutions: (1) Wait until tomorrow for quota reset, (2) Get a new API key from https://aistudio.google.com/apikey, "
+                "(3) Add GROQ_API_KEY to .env for fallback. Current errors: " + '; '.join(errors[:2])
+            )
+        
         raise Exception(f"All models failed. Errors: {'; '.join(errors)}")
     
-    def _call_model(self, model_name, prompt, max_tokens):
-        if model_name == 'gemini':
-            return self._call_gemini(prompt)
+    def _call_model(self, model_name, prompt, max_tokens, api_key=None):
+        if model_name == 'gemini_flash':
+            return self._call_gemini(prompt, 'gemini-2.0-flash', api_key=api_key)
+        elif model_name == 'gemini_flash_8b':
+            return self._call_gemini(prompt, 'gemini-2.0-flash-lite', api_key=api_key)
+        elif model_name == 'gemini_pro':
+            return self._call_gemini(prompt, 'gemini-2.5-pro', api_key=api_key)
+        elif model_name == 'nvidia_minimax':
+            return self._call_nvidia_minimax(prompt, max_tokens, api_key=api_key)
         elif model_name == 'groq':
-            return self._call_groq(prompt, max_tokens)
+            return self._call_groq(prompt, max_tokens, api_key=api_key)
     
-    def _call_gemini(self, prompt):
-        api_key = os.getenv('GEMINI_API_KEY')
-        if not api_key:
+    def _call_gemini(self, prompt, model='gemini-2.0-flash', api_key=None):
+        key = api_key or os.getenv('GEMINI_API_KEY')
+        if not key:
             raise ValueError("GEMINI_API_KEY not found")
-        client = genai.Client(api_key=api_key)
+        client = genai.Client(api_key=key)
         response = client.models.generate_content(
-            model='gemini-2.0-flash',
-            contents=prompt
+            model=model,
+            contents=prompt,
+            config={
+                'temperature': 0.3,
+                'top_p': 0.95,
+                'top_k': 40,
+                'max_output_tokens': 8192,
+            }
         )
         return response.text.strip()
 
-    def _call_groq(self, prompt, max_tokens):
-        api_key = os.getenv('GROQ_API_KEY')
-        if not api_key:
+    def _call_groq(self, prompt, max_tokens, api_key=None):
+        key = api_key or os.getenv('GROQ_API_KEY')
+        if not key:
             raise ValueError("GROQ_API_KEY not found")
+        
+        # Groq has strict limits - truncate aggressively
+        max_input_chars = 30000  # Much more conservative
+        if len(prompt) > max_input_chars:
+            prompt = prompt[:max_input_chars] + "\n\n[Content truncated to fit Groq limits]"
+        
+        messages = self._split_prompt(prompt)
+        
+        # Truncate individual messages
+        for msg in messages:
+            if len(msg.get('content', '')) > max_input_chars:
+                msg['content'] = msg['content'][:max_input_chars] + "\n\n[Truncated]"
+        
         response = requests.post(
             'https://api.groq.com/openai/v1/chat/completions',
-            headers={'Authorization': f'Bearer {api_key}'},
+            headers={'Authorization': f'Bearer {key}'},
             json={
                 'model': 'llama-3.3-70b-versatile',
-                'messages': self._split_prompt(prompt),
-                'max_tokens': min(max_tokens, 8192),
+                'messages': messages,
+                'max_tokens': min(max_tokens, 4096),
                 'temperature': 0.7,
             },
             timeout=60
@@ -102,6 +143,44 @@ class AIModelFallback:
         response.raise_for_status()
         msg = response.json().get('choices', [{}])[0].get('message', {})
         return str(msg.get('content', '')).strip()
+
+    def _call_nvidia_minimax(self, prompt, max_tokens, api_key=None):
+        key = api_key or os.getenv('NVIDIA_API_KEY')
+        if not key:
+            raise ValueError("NVIDIA_API_KEY not found")
+        
+        from openai import OpenAI
+        import httpx
+        
+        # Create client with longer timeout
+        client = OpenAI(
+            base_url="https://integrate.api.nvidia.com/v1",
+            api_key=key,
+            timeout=httpx.Timeout(60.0, connect=10.0)  # 60s total, 10s connect
+        )
+        
+        # Truncate prompt for faster response
+        max_input_chars = 6000
+        if len(prompt) > max_input_chars:
+            prompt = prompt[:max_input_chars] + "\n\n[Truncated for speed]"
+        
+        messages = self._split_prompt(prompt)
+        
+        try:
+            completion = client.chat.completions.create(
+                model="minimaxai/minimax-m2.7",
+                messages=messages,
+                temperature=0.7,
+                top_p=0.9,
+                max_tokens=min(max_tokens, 2048),
+                stream=False
+            )
+            return completion.choices[0].message.content.strip()
+        except Exception as e:
+            error_msg = str(e)
+            if "timeout" in error_msg.lower():
+                raise Exception(f"NVIDIA API timeout - the model is taking too long to respond. Try a simpler prompt or use a different model.")
+            raise Exception(f"NVIDIA API error: {error_msg}")
 
     def _split_prompt(self, prompt):
         """Separate system and user parts if combined."""
@@ -132,9 +211,9 @@ def get_client():
     return genai.Client(api_key=api_key)
 
 @DeepCopyLRUCache(capacity=500)
-def generate_with_fallback(prompt, max_tokens=2000, preferred_model=None):
+def generate_with_fallback(prompt, max_tokens=2000, preferred_model=None, api_key=None):
     """Generate text with automatic model fallback."""
-    return _fallback.generate(prompt, max_tokens, preferred_model=preferred_model)
+    return _fallback.generate(prompt, max_tokens, preferred_model=preferred_model, api_key=api_key)
 
 
 # ============================================================================
@@ -429,17 +508,18 @@ def analyze_quality_heatmap(prompt):
 # ============================================================================
 
 @DeepCopyLRUCache(capacity=500)
-def generate_ab_variations(prompt):
+def generate_ab_variations(prompt, preferred_model=None, api_key=None):
     """Generate 3 variations with fallback concurrently to prevent Vercel Application Timeouts"""
     
-    def fetch_variation(style_prompt, max_tokens, preferred_model=None):
-        result = generate_with_fallback(style_prompt, max_tokens, preferred_model=preferred_model)
+    def fetch_variation(style_prompt, max_tokens, preferred_model=None, api_key=None):
+        result = generate_with_fallback(style_prompt, max_tokens, preferred_model=preferred_model, api_key=api_key)
         return {'text': result['text'], 'length': len(result['text']), 'model': result['model']}
 
     try:
+        from concurrent.futures import ThreadPoolExecutor
+        
         # Prepare prompts
         c_prompt = f"Make this prompt concise and direct (max 150 words) focusing only on core deliverables:\n{prompt}"
-        
         d_prompt = f"""Expand this prompt into a comprehensive, highly-detailed technical specification.
 You MUST include:
 1. Deep technical requirements and functional constraints.
@@ -447,23 +527,36 @@ You MUST include:
 3. How different components and integrations will work together.
 4. Edge cases, performance considerations, and scalability.
 Make it as detailed and exhaustive as possible:\n{prompt}"""
-
         s_prompt = f"""Rewrite this prompt using the advanced CREATE Prompt Engineering Algorithm.
 Structure the final output as a comprehensive, highly-organized technical document. It MUST include:
-
 1. **Context & Role**: Set the precise persona and background information.
 2. **Request**: The core task defined with unambiguous clarity.
-3. **Explanation (Diagram)**: Provide a visual architecture or logic flow using a Mermaid.js diagram (e.g. ```mermaid ...```). This is mandatory to elaborate and explain complex structures.
+ 3. **Explanation (Diagram)**: Provide a visual architecture or logic flow using a D2 diagram. 
+    CRITICAL REQUIREMENT: You MUST wrap the diagram code in TRIPLE BACKTICKS with the 'd2' identifier.
+    Format:
+    ```d2
+    [Your D2 code here]
+    ```
+    D2 Syntax: `NodeName: {{ shape: person; label: "Label Name" }}`. Use `->` for connections. NO ASCII ART.
 4. **Action Steps**: Step-by-step breakdown of how the task should be executed.
 5. **Tone & Constraints**: Explicit boundaries, technologies, and styling rules.
 6. **Extras/Examples**: Include edge cases or output format specifications.
-
 Ensure the final output is exceptionally professional and visually structured using Markdown headers and bullet points. Here is the original prompt to enhance:\n{prompt}"""
 
-        # Fetch variations routing to different models to avoid free-tier API rate limits (HTTP 429)
-        concise = fetch_variation(c_prompt, 800, preferred_model='gemini')
-        detailed = fetch_variation(d_prompt, 2048, preferred_model='nvidia_mistral')
-        structured = fetch_variation(s_prompt, 2048, preferred_model='nvidia_qwen')
+        p_model = preferred_model
+        v1_model = p_model or 'gemini_flash'
+        v2_model = p_model or 'gemini_flash_8b'
+        v3_model = p_model or 'gemini_pro'
+
+        # Execute all 3 variations CONCURRENTLY
+        with ThreadPoolExecutor(max_workers=3) as executor:
+            future_c = executor.submit(fetch_variation, c_prompt, 800, v1_model, api_key)
+            future_d = executor.submit(fetch_variation, d_prompt, 2048, v2_model, api_key)
+            future_s = executor.submit(fetch_variation, s_prompt, 2048, v3_model, api_key)
+            
+            concise = future_c.result()
+            detailed = future_d.result()
+            structured = future_s.result()
         
         return {
             'concise': concise,

@@ -725,3 +725,200 @@ body {
     z-index: 50;
   }
 }
+/* Enhanced Mobile Responsive */
+@media (max-width: 900px) {
+  .build-sidebar {
+    display: none;
+  }
+  
+  .results-panel {
+    width: 300px;
+  }
+  
+  .chat-area {
+    padding: 20px;
+  }
+  
+  .input-area {
+    padding: 15px 20px 20px;
+  }
+  
+  .welcome-message {
+    margin-top: 40px;
+  }
+  
+  .welcome-message h2 {
+    font-size: 1.5rem;
+  }
+  
+  .quick-starts {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 768px) {
+  .nav {
+    padding: 0 1rem;
+  }
+  
+  .nav-links {
+    display: none;
+  }
+  
+  .nav-logo img {
+    width: 28px;
+    height: 28px;
+  }
+  
+  .build-container {
+    height: calc(100vh - 50px);
+    margin-top: 50px;
+  }
+  
+  .results-panel {
+    position: fixed;
+    right: 0;
+    top: 50px;
+    bottom: 0;
+    width: 100%;
+    max-width: 350px;
+    z-index: 50;
+    box-shadow: -4px 0 20px rgba(0, 0, 0, 0.3);
+  }
+  
+  .chat-area {
+    padding: 15px;
+  }
+  
+  .message {
+    gap: 10px;
+  }
+  
+  .message-content {
+    padding: 12px 15px;
+    max-width: 85%;
+  }
+  
+  .message-content p {
+    font-size: 0.9rem;
+  }
+  
+  .input-area {
+    padding: 10px 15px 15px;
+  }
+  
+  .input-wrapper {
+    padding: 10px 12px;
+  }
+  
+  .input-wrapper textarea {
+    font-size: 0.9rem;
+  }
+  
+  .send-button {
+    width: 36px;
+    height: 36px;
+  }
+  
+  .input-footer {
+    flex-direction: column;
+    gap: 8px;
+    align-items: flex-start;
+  }
+  
+  .welcome-message {
+    padding: 0 1rem;
+  }
+  
+  .welcome-icon {
+    width: 60px;
+    height: 60px;
+  }
+  
+  .welcome-message h2 {
+    font-size: 1.25rem;
+  }
+  
+  .welcome-message p {
+    font-size: 0.9rem;
+  }
+  
+  .quick-start {
+    padding: 12px 15px;
+    font-size: 0.85rem;
+  }
+}
+
+@media (max-width: 480px) {
+  .nav {
+    height: 50px;
+  }
+  
+  .nav-brand span {
+    font-size: 1rem;
+  }
+  
+  .btn-primary {
+    padding: 8px 14px;
+    font-size: 0.85rem;
+  }
+  
+  .build-container {
+    margin-top: 50px;
+    height: calc(100vh - 50px);
+  }
+  
+  .results-panel {
+    max-width: 100%;
+  }
+  
+  .panel-header {
+    padding: 12px 15px;
+  }
+  
+  .panel-content {
+    padding: 15px;
+  }
+  
+  .result-card {
+    padding: 12px;
+  }
+  
+  .message-avatar {
+    width: 30px;
+    height: 30px;
+  }
+  
+  .message-content {
+    padding: 10px 12px;
+    font-size: 0.85rem;
+  }
+  
+  .input-wrapper {
+    padding: 8px 10px;
+  }
+  
+  .input-wrapper textarea {
+    font-size: 0.85rem;
+  }
+  
+  .send-button {
+    width: 32px;
+    height: 32px;
+  }
+  
+  .toast {
+    font-size: 0.85rem;
+    padding: 10px 15px;
+  }
+  
+  #toast-container {
+    bottom: 16px;
+    right: 16px;
+    left: 16px;
+  }
+  
+  .toast {
+    width: 100%;
+  }
+}

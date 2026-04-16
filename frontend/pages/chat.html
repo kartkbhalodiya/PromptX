@@ -1,35 +1,99 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>PromptX — AI Chat Terminal</title>
-  <meta name="description" content="PromptX interactive AI prompt engineering terminal.">
-  <meta name="theme-color" content="#00ff41">
+  <title>PromptX - AI Prompt Workspace</title>
+  <meta name="description"
+    content="PromptX prompt workspace for enhancing, analyzing, and comparing prompts in a cleaner guided UI.">
+  <meta name="theme-color" content="#00d97e">
   <link rel="icon" type="image/svg+xml" href="../Public/star.svg">
   <link rel="stylesheet" href="../styles/index.css">
   <link rel="stylesheet" href="../styles/chat.css">
 </head>
+
 <body>
 
-  <!-- Background -->
-  <div class="cyber-bg"></div>
-  <div class="scanlines"></div>
+  <!-- Identical Background to Landing Page -->
+  <canvas id="fc-canvas-particles" aria-hidden="true"></canvas>
+  <div class="fc-bg-blobs"></div>
+  <div class="fc-grid-overlay"></div>
+  <div class="fc-dots" aria-hidden="true">
+    <span class="fc-dot" style="top:12%;left:8%"></span>
+    <span class="fc-dot" style="top:8%;left:25%"></span>
+    <span class="fc-dot" style="top:18%;left:42%"></span>
+    <span class="fc-dot" style="top:6%;left:58%"></span>
+    <span class="fc-dot" style="top:14%;left:75%"></span>
+    <span class="fc-dot" style="top:10%;left:92%"></span>
+    <span class="fc-dot" style="top:28%;left:16%"></span>
+    <span class="fc-dot" style="top:32%;left:33%"></span>
+    <span class="fc-dot" style="top:24%;left:50%"></span>
+    <span class="fc-dot" style="top:35%;left:66%"></span>
+    <span class="fc-dot" style="top:30%;left:83%"></span>
+    <span class="fc-dot" style="top:45%;left:10%"></span>
+    <span class="fc-dot" style="top:50%;left:25%"></span>
+    <span class="fc-dot" style="top:42%;left:42%"></span>
+    <span class="fc-dot" style="top:55%;left:58%"></span>
+    <span class="fc-dot" style="top:48%;left:75%"></span>
+    <span class="fc-dot" style="top:52%;left:90%"></span>
+    <span class="fc-dot" style="top:65%;left:18%"></span>
+    <span class="fc-dot" style="top:70%;left:35%"></span>
+    <span class="fc-dot" style="top:60%;left:50%"></span>
+    <span class="fc-dot" style="top:72%;left:66%"></span>
+    <span class="fc-dot" style="top:68%;left:82%"></span>
+    <span class="fc-dot" style="top:80%;left:8%"></span>
+    <span class="fc-dot" style="top:85%;left:25%"></span>
+    <span class="fc-dot" style="top:78%;left:42%"></span>
+    <span class="fc-dot" style="top:88%;left:58%"></span>
+    <span class="fc-dot" style="top:82%;left:75%"></span>
+    <span class="fc-dot" style="top:90%;left:92%"></span>
+  </div>
+  <div class="fc-float-labels" aria-hidden="true">
+    <span class="fc-label" style="top:9%;left:5%">[ ENHANCE ]</span>
+    <span class="fc-label" style="top:15%;right:8%">[ 9.2/10 ]</span>
+    <span class="fc-label" style="top:35%;left:3%">[ PIPELINE ]</span>
+    <span class="fc-label" style="top:28%;right:4%">[ .JSON ]</span>
+    <span class="fc-label" style="top:55%;left:6%">[ GEMINI ]</span>
+    <span class="fc-label" style="top:60%;right:6%">[ 200 OK ]</span>
+    <span class="fc-label" style="top:75%;left:4%">[ SCRAPE ]</span>
+    <span class="fc-label" style="top:80%;right:5%">[ MASTER ]</span>
+    <span class="fc-label" style="top:45%;right:2%">[ v2.0 ]</span>
+    <span class="fc-label" style="top:92%;left:8%">[ SCORE ]</span>
+  </div>
+  <div class="fc-ghost-code" aria-hidden="true">
+    <pre>{
+  "model": "gemini-2.0",
+  "status": "200 OK"
+  }</pre>
+  </div>
+  <div class="fc-vignette"></div>
+  <div class="fc-sparks" aria-hidden="true">
+    <span class="fc-spark" style="top:20%;left:22%">✦</span>
+    <span class="fc-spark" style="top:40%;right:18%">✦</span>
+    <span class="fc-spark" style="top:65%;left:30%">✦</span>
+    <span class="fc-spark" style="top:85%;right:25%">✦</span>
+    <span class="fc-spark" style="top:50%;left:60%">✦</span>
+  </div>
 
   <!-- Sidebar -->
   <aside class="chat-sidebar" id="chat-sidebar">
     <div class="sidebar-header">
       <a href="index.html" class="sidebar-brand">
-        <img src="../Public/bot-img.png" alt="PromptX">
-        <span>PROMPTX</span>
+        <img src="../Public/PROMPTX-banner.png" alt="PromptX"
+          style="height: 22px; width: auto; filter: drop-shadow(0 0 8px rgba(255,255,255,0.2));">
       </a>
       <button class="sidebar-close-btn" id="sidebar-close" title="Close sidebar">
-        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 6L6 18M6 6l12 12"/></svg>
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <path d="M18 6L6 18M6 6l12 12" />
+        </svg>
       </button>
     </div>
 
     <button class="new-chat-btn" id="new-chat-btn">
-      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 5v14M5 12h14"/></svg>
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <path d="M12 5v14M5 12h14" />
+      </svg>
       New Chat
     </button>
 
@@ -51,7 +115,10 @@
 
     <!-- Chat History -->
     <div class="sidebar-section sidebar-history-section">
-      <div class="sidebar-label">History</div>
+      <div class="sidebar-section-header">
+        <div class="sidebar-label">History</div>
+        <button class="history-clear-btn" id="clear-history-btn" type="button">Clear</button>
+      </div>
       <div class="history-list" id="history-list">
         <!-- Populated by JS -->
         <div class="history-empty" id="history-empty">
@@ -60,21 +127,10 @@
       </div>
     </div>
 
-    <!-- Model & API Key -->
     <div class="sidebar-footer">
-      <div class="sidebar-label">Model</div>
-      <div class="model-select-list" id="model-select-list">
-        <button class="model-option active" data-model="gemini">
-          <span class="model-dot gemini-dot"></span>
-          Gemini 2.0 Flash
-        </button>
-        <button class="model-option" data-model="groq">
-          <span class="model-dot groq-dot"></span>
-          Groq (Llama 3)
-        </button>
-      </div>
-      <div class="sidebar-label" style="margin-top:0.85rem;">API Key</div>
-      <input type="password" id="api-key-input" placeholder="Optional — leave blank to use default" class="sidebar-api-input">
+      <div class="sidebar-label">API Key</div>
+      <input type="password" id="api-key-input" placeholder="Optional — leave blank to use default"
+        class="sidebar-api-input">
     </div>
   </aside>
 
@@ -85,9 +141,9 @@
       <div class="topbar-left">
         <button class="sidebar-toggle-btn" id="sidebar-toggle" title="Toggle sidebar">
           <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-            <line x1="3" y1="6" x2="21" y2="6"/>
-            <line x1="3" y1="12" x2="21" y2="12"/>
-            <line x1="3" y1="18" x2="21" y2="18"/>
+            <line x1="3" y1="6" x2="21" y2="6" />
+            <line x1="3" y1="12" x2="21" y2="12" />
+            <line x1="3" y1="18" x2="21" y2="18" />
           </svg>
         </button>
         <div class="topbar-title">
@@ -95,46 +151,58 @@
         </div>
       </div>
       <div class="topbar-right">
-        <span class="topbar-model-badge" id="topbar-model-badge">Gemini 2.0</span>
+        <span class="topbar-model-badge" id="topbar-model-badge">Gemini 2.0 Flash</span>
       </div>
     </div>
 
     <!-- Chat Messages -->
     <div class="chat-messages-area" id="chat-messages">
       <div class="welcome-screen" id="welcome-screen">
-        <img src="/Public/bot-img.png" alt="PromptX" class="welcome-logo">
-        <h1>PROMPTX</h1>
-        <p>Pick a mode below, type your prompt, and hit send.</p>
-        
+        <div class="welcome-badge">PROMPT WORKSPACE</div>
+        <h1 class="welcome-title">PromptX<span> Workspace</span></h1>
+        <p class="welcome-subtitle">Enhance rough prompts, analyze quality, compare rewrites, and turn raw ideas into
+          clearer AI-ready instructions.</p>
+
         <div class="welcome-cards">
           <button class="welcome-card" data-action="enhance">
             <div class="wc-icon">✦</div>
             <div class="wc-text">
               <strong>Enhance Prompt</strong>
-              <span>Rewrite it to be clearer and more detailed</span>
+              <span>Turn rough text into a clearer, stronger prompt</span>
             </div>
           </button>
           <button class="welcome-card" data-action="analyze">
             <div class="wc-icon">◈</div>
             <div class="wc-text">
               <strong>Analyze Quality</strong>
-              <span>Get a score and tips to improve it</span>
+              <span>See what is weak and how to improve it</span>
             </div>
           </button>
           <button class="welcome-card" data-action="compare">
             <div class="wc-icon">⇄</div>
             <div class="wc-text">
               <strong>Compare Versions</strong>
-              <span>See 3 different rewrites side by side</span>
+              <span>Review multiple prompt versions side by side</span>
             </div>
           </button>
         </div>
 
         <div class="welcome-examples">
-          <div class="examples-label">Try an example:</div>
-          <button class="example-chip" onclick="fillPrompt('Write a blog post about artificial intelligence')">Write a blog about AI</button>
-          <button class="example-chip" onclick="fillPrompt('Create a Python function to sort a list of dictionaries by key')">Sort list of dicts in Python</button>
-          <button class="example-chip" onclick="fillPrompt('Design a marketing strategy for a SaaS product launch')">SaaS marketing strategy</button>
+          <div class="examples-header">
+            <span class="ex-line"></span>
+            <span class="examples-label">TRY A QUICK START</span>
+            <span class="ex-line"></span>
+          </div>
+          <div class="examples-grid">
+            <button class="example-chip" onclick="fillPrompt('Write a blog post about artificial intelligence')">Write a
+              blog about AI</button>
+            <button class="example-chip"
+              onclick="fillPrompt('Create a Python function to sort a list of dictionaries by key')">Sort list of dicts
+              in Python</button>
+            <button class="example-chip"
+              onclick="fillPrompt('Design a marketing strategy for a SaaS product launch')">SaaS marketing
+              strategy</button>
+          </div>
         </div>
       </div>
     </div>
@@ -142,9 +210,22 @@
     <!-- Chat Input -->
     <div class="chat-input-bottom">
       <div class="chat-input-wrapper">
-        <textarea id="chat-input" placeholder="Enter a prompt to enhance..." rows="1"></textarea>
+        <div class="input-actions-left">
+          <select id="model-dropdown" class="model-dropdown">
+            <option value="auto">Auto</option>
+            <option value="gemini_flash">Gemini 2.0 Flash</option>
+            <option value="gemini_flash_8b">Gemini 2.0 Flash Lite</option>
+            <option value="gemini_pro">Gemini 2.5 Pro</option>
+            <option value="nvidia_minimax">NVIDIA Minimax</option>
+            <option value="groq">Groq (Llama 3)</option>
+          </select>
+        </div>
+        <textarea id="chat-input" placeholder="Type here..." rows="1"></textarea>
         <button class="send-btn" id="send-btn" disabled>
-          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M12 19V5M5 12l7-7 7 7"/></svg>
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"
+            stroke-linecap="round" stroke-linejoin="round">
+            <polyline points="18 15 12 9 6 15"></polyline>
+          </svg>
         </button>
       </div>
       <div class="input-footer">
@@ -161,6 +242,9 @@
   <script src="https://cdn.jsdelivr.net/npm/lucide@latest/dist/umd/lucide.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/dompurify/3.0.6/purify.min.js"></script>
+  <!-- D2 Cloud Engine handled via chat.js -->
   <script src="../scripts/chat.js"></script>
+  <script src="../scripts/index.js"></script>
 </body>
+
 </html>
