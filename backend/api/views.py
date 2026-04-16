@@ -90,7 +90,21 @@ _DEEP_RESEARCH_SIGNALS = [
     'architecture for', 'system design', 'tech stack for',
     'explain in detail', 'explain deeply', 'deep dive', 'in depth',
     'comprehensive guide', 'step by step guide', 'complete guide',
-    'everything about', 'tell me everything',
+    'everything about', 'tell me everything', 'details', 'give details',
+    'how it works', 'how does', 'how do', 'explain', 'what is the architecture',
+    'step by step', 'explain step by step', 'how chatgpt work', 'how chat gpt work',
+    'diagram', 'diagam', 'diagrram', 'architecture', 'visualize', 'draw a', 'show me a',
+    'flowchart', 'structure of', 'breakdown of', 'hoe it work', 'hoe does'
+]
+
+# Signals that the user wants idea generation
+_IDEA_SIGNALS = [
+    'suggest me', 'give me ideas', 'business idea', 'project idea',
+    'startup idea', 'side hustle', 'make money', 'how to make money',
+    'money making', 'income idea', 'passive income', 'high grossing',
+    'best idea', 'new idea', 'innovation', 'entrepreneur',
+    'i want to start', 'i want to build', 'what business',
+    'profitable business', 'lucrative', 'most profitable',
 ]
 
 def _is_greeting(text: str) -> bool:
@@ -105,9 +119,15 @@ def _needs_deep_research(text: str) -> bool:
     lower = text.lower()
     signal_count = sum(1 for s in _DEEP_RESEARCH_SIGNALS if s in lower)
     # Trigger deep research more eagerly
-    if signal_count >= 1 and any(word in lower for word in ['build', 'bulid', 'create', 'make', 'agent', 'app', 'website', 'clone', 'system']):
+    trigger_words = ['build', 'bulid', 'create', 'make', 'agent', 'app', 'website', 'clone', 'system', 'explain', 'details', 'how']
+    if signal_count >= 1 or any(f" {w} " in f" {lower} " for w in trigger_words):
         return True
     return False
+
+def _needs_ideas(text: str) -> bool:
+    """Detect if the user wants idea generation."""
+    lower = text.lower()
+    return any(signal in lower for signal in _IDEA_SIGNALS)
 
 _URL_PATTERN = re.compile(r'https?://[^\s<>"\']+|www\.[^\s<>"\']+', re.IGNORECASE)
 
@@ -282,7 +302,7 @@ def enhance_view(request):
             return JsonResponse({'error': f'Prompt too long: {len(prompt)} chars'}, status=400)
 
         preferred_model = data.get('model')
-        model_arg = preferred_model if preferred_model in ('gemini', 'groq', 'nvidia', 'mistral', 'llama_405b', 'glm', 'deepseek', 'kimi', 'kimi_think', 'gpt_oss') else None
+        model_arg = preferred_model if preferred_model in ('gemini_flash', 'gemini_flash_8b', 'gemini_pro', 'nvidia_minimax', 'groq') else None
         
         # User-provided API Key from headers
         api_key = request.headers.get('X-API-Key')
@@ -305,6 +325,48 @@ def enhance_view(request):
                 'enhanced_score': {'total': 0, 'percentage': 0, 'quality': 'N/A'},
                 'improvement': 0,
                 'classification': {'category': 'greeting', 'confidence': 1.0},
+            })
+
+        # ── 1.5. Idea generation request → generate ideas ───────────────────
+        if _needs_ideas(prompt):
+            logger.info(f"Idea generation triggered for: {prompt[:80]}...")
+            from enhancer.core.idea_generator import IdeaGenerator
+            generator = IdeaGenerator()
+            result = generator.generate(prompt, quantity=5)
+            
+            # Build a comprehensive response with AI enhancement
+            ideas_text = "\n\n".join([
+                f"## {i+1}. {idea.get('title', 'Untitled')}\n"
+                f"**Description:** {idea.get('description', 'N/A')}\n"
+                + (f"**Market Size:** {idea.get('market_size', '')}\n" if idea.get('market_size') else "")
+                + (f"**Revenue Potential:** {idea.get('revenue_potential', idea.get('income_potential', ''))}\n" if idea.get('revenue_potential') or idea.get('income_potential') else "")
+                + (f"**Startup Cost:** {idea.get('startup_cost', '')}\n" if idea.get('startup_cost') else "")
+                + (f"**Time to Revenue:** {idea.get('time_to_revenue', '')}\n" if idea.get('time_to_revenue') else "")
+                + (f"**Difficulty:** {idea.get('difficulty', '')}\n" if idea.get('difficulty') else "")
+                + (f"**Skills Needed:** {', '.join(idea.get('skills_needed', []))}\n" if idea.get('skills_needed') else "")
+                + (f"**Tech Stack:** {', '.join(idea.get('tech_stack', []))}\n" if idea.get('tech_stack') else "")
+                + (f"**Features:** {', '.join(idea.get('features', []))}\n" if idea.get('features') else "")
+                + (f"**Use Cases:** {', '.join(idea.get('use_cases', []))}\n" if idea.get('use_cases') else "")
+                + (f"**Tools Needed:** {idea.get('tools_needed', '')}\n" if idea.get('tools_needed') else "")
+                + (f"**Time Investment:** {idea.get('time_investment', '')}\n" if idea.get('time_investment') else "")
+                for i, idea in enumerate(result.ideas)
+            ])
+            
+            enhanced = f"# 💡 Business & Project Ideas\n\n{ideas_text}\n\n---\n*Generated by PromptX Idea Generator*"
+            
+            return JsonResponse({
+                'success': True,
+                'type': 'ideas',
+                'original': prompt,
+                'enhanced': enhanced,
+                'category': result.category,
+                'total_ideas': result.total_ideas,
+                'ideas': result.ideas,
+                'model': 'local_generator',
+                'classification': {'category': 'idea', 'confidence': 1.0},
+                'original_score': score_prompt(prompt),
+                'enhanced_score': score_prompt(enhanced),
+                'improvement': 0,
             })
 
         # ── 2. URL in prompt → deep multi-page scrape + web search ──────────
@@ -498,9 +560,10 @@ Respond in 3-5 sentences, very concisely. This is an internal analysis step."""
         })
 
     except Exception as e:
-        logger.error(f"Error in enhance endpoint: {str(e)}")
+        import traceback
+        logger.error(f"Error in enhance endpoint: {str(e)}\n{traceback.format_exc()}")
         return JsonResponse(
-            {'error': 'An internal server error occurred.', 'success': False},
+            {'error': f'An internal server error occurred: {str(e)}', 'success': False},
             status=500
         )
 
@@ -603,7 +666,7 @@ def ab_test_view(request):
         api_key = request.headers.get('X-API-Key')
         
         preferred_model = data.get('model')
-        model_arg = preferred_model if preferred_model in ('gemini', 'groq', 'nvidia', 'mistral', 'llama_405b', 'glm', 'deepseek', 'kimi', 'kimi_think', 'gpt_oss') else None
+        model_arg = preferred_model if preferred_model in ('gemini_flash', 'gemini_flash_8b', 'gemini_pro', 'nvidia_minimax', 'groq') else None
 
         variations = generate_ab_variations(prompt, preferred_model=model_arg, api_key=api_key)
         
@@ -654,7 +717,7 @@ def analyze_url_view(request):
 
         question = sanitize_input(data.get('question', '').strip()) or \
                    'Give a complete deep analysis of this website.'
-        model_arg = data.get('model') if data.get('model') in ('gemini', 'groq', 'nvidia', 'mistral', 'llama_405b', 'glm', 'deepseek', 'kimi', 'kimi_think', 'gpt_oss') else None
+        model_arg = data.get('model') if data.get('model') in ('gemini_flash', 'gemini_flash_8b', 'gemini_pro', 'nvidia_minimax', 'groq') else None
         api_key = request.headers.get('X-API-Key')
 
         from urllib.parse import urlparse
@@ -760,7 +823,7 @@ def web_search_view(request):
         if not query:
             return JsonResponse({'error': 'Search query is required'}, status=400)
 
-        model_arg = data.get('model') if data.get('model') in ('gemini', 'groq', 'nvidia', 'mistral', 'llama_405b', 'glm', 'deepseek', 'kimi', 'kimi_think', 'gpt_oss') else None
+        model_arg = data.get('model') if data.get('model') in ('gemini_flash', 'gemini_flash_8b', 'gemini_pro', 'nvidia_minimax', 'groq') else None
         api_key = request.headers.get('X-API-Key')
 
         logger.info(f"Web search: {query}")
@@ -814,4 +877,47 @@ Be factual, specific, and cite which results support each point."""
 
     except Exception as e:
         logger.error(f"Error in web-search endpoint: {str(e)}")
+        return JsonResponse({'error': 'An internal server error occurred.', 'success': False}, status=500)
+# ============================================================================
+# IDEA GENERATION ENDPOINT
+# ============================================================================
+
+@csrf_exempt
+@require_http_methods(["POST"])
+@ratelimit(key='ip', rate='20/m', block=True)
+def ideas_view(request):
+    """
+    Generate business, project, and money-making ideas.
+    Body: { prompt: string, category?: string, quantity?: number }
+    """
+    try:
+        data, err = _parse_json(request)
+        if err:
+            return err
+
+        prompt = sanitize_input((data.get('prompt') or '').strip())
+        if not prompt:
+            return JsonResponse({'error': 'Prompt is required'}, status=400)
+
+        category = data.get('category')  # business, side_hustle, coding, hacking, startup
+        quantity = min(int(data.get('quantity', 5)), 10)  # Max 10 ideas
+
+        # Import and use the idea generator
+        from enhancer.core.idea_generator import IdeaGenerator
+        generator = IdeaGenerator()
+        
+        result = generator.generate(prompt, category=category, quantity=quantity)
+
+        logger.info(f"Ideas generated for {_get_client_ip(request)}: {result.category}")
+        return JsonResponse({
+            'success': True,
+            'type': 'ideas',
+            'category': result.category,
+            'total_ideas': result.total_ideas,
+            'ideas': result.ideas,
+            'processing_time_ms': result.processing_time_ms,
+        })
+
+    except Exception as e:
+        logger.error(f"Error in ideas endpoint: {str(e)}")
         return JsonResponse({'error': 'An internal server error occurred.', 'success': False}, status=500)

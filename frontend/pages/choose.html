@@ -1,5 +1,7 @@
 <!DOCTYPE html>
 <html lang="en">
+<!DOCTYPE html>
+<html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -9,14 +11,13 @@
     <link rel="stylesheet" href="/styles/index.css">
     <style>
         body {
-            background: var(--bg-darker);
+            background: var(--bg-dark); /* Changed to light theme */
             color: var(--text-primary);
             min-height: 100vh;
             margin: 0;
             overflow-x: hidden;
         }
 
-        /* Adjusting layout for navbar presence */
         .choose-main {
             display: flex;
             align-items: center;
@@ -31,6 +32,7 @@
             width: 100%;
             max-width: 1000px;
             animation: fadeIn 0.8s ease-out;
+            background: transparent;
         }
 
         @keyframes fadeIn {
@@ -44,8 +46,8 @@
         }
 
         .dashboard-header h1 {
-            font-family: var(--font-body);
-            font-size: 2.4rem;
+            font-family: var(--font-display);
+            font-size: 2.6rem;
             font-weight: 800;
             letter-spacing: -0.02em;
             color: var(--text-primary);
@@ -56,76 +58,96 @@
             font-family: var(--font-body);
             color: var(--text-secondary);
             margin-top: 0.75rem;
-            font-size: 1rem;
+            font-size: 1.1rem;
             letter-spacing: 0;
+            font-weight: 500;
         }
+
+        .choose-brand {
+            display: flex;
+            align-items: center;
+            text-decoration: none;
+        }
+
+        .choose-brand img {
+            width: 180px;
+            height: auto;
+            max-height: 44px;
+            object-fit: contain;
+            mix-blend-mode: multiply;
+        }
+        
+        .navbar {
+            padding: 1.5rem 3rem;
+            background: var(--bg-dark), rgba(250,250,250,0.8);
+            border-bottom: 1px solid var(--border);
+            backdrop-filter: blur(10px);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            position: fixed;
+            top: 0; left: 0; right: 0;
+            z-index: 500;
+        }
+        .nav-actions { display: flex; align-items: center; }
+        .nav-github { text-decoration: none; padding: 0.5rem 1rem; border: 1px solid var(--border); border-radius: var(--radius-sm); font-family: var(--font-mono); font-size: 0.8rem; font-weight: 600; transition: var(--transition); background: #ffffff; }
+        .nav-github:hover { background: var(--bg-sidebar); border-color: var(--border-active); }
 
         .options-container {
             display: grid;
             grid-template-columns: repeat(2, 1fr);
-            gap: 2rem;
+            gap: 2.5rem;
+            z-index: 50;
         }
 
         .module-card {
-            background: rgba(10, 15, 12, 0.6);
-            backdrop-filter: blur(25px);
+            background: var(--bg-darker);
             border: 1px solid var(--border);
             border-radius: var(--radius-lg);
             padding: 3rem 2.5rem;
             cursor: pointer;
             position: relative;
-            transition: all 0.4s cubic-bezier(0.17, 0.67, 0.83, 0.67);
-            overflow: hidden;
+            transition: var(--transition);
             display: flex;
             flex-direction: column;
-        }
-
-        .module-card::before {
-            content: "";
-            position: absolute;
-            inset: 0;
-            background: linear-gradient(135deg, rgba(0, 255, 65, 0.05) 0%, transparent 100%);
-            opacity: 0;
-            transition: opacity 0.3s;
+            box-shadow: var(--shadow);
+            z-index: 50;
         }
 
         .module-card:hover {
             border-color: var(--primary);
-            transform: translateY(-10px);
-            box-shadow: 0 20px 60px rgba(0, 255, 65, 0.12);
-        }
-
-        .module-card:hover::before {
-            opacity: 1;
+            transform: translateY(-8px);
+            box-shadow: 0 15px 40px var(--primary-glow);
+            background: #ffffff;
         }
 
         .module-icon {
-            font-size: 2.5rem;
+            font-size: 2.8rem;
             color: var(--primary);
             margin-bottom: 2rem;
-            transition: 0.3s;
-            filter: drop-shadow(0 0 8px var(--primary-glow));
+            transition: transform 0.3s;
         }
 
         .module-card:hover .module-icon {
-            transform: scale(1.1);
-            filter: drop-shadow(0 0 15px var(--primary-glow));
+            transform: scale(1.08);
         }
 
         .module-content h2 {
-            font-family: var(--font-body);
-            font-size: 1.4rem;
+            font-family: var(--font-display);
+            font-size: 1.5rem;
             font-weight: 700;
-            color: #fff;
+            color: var(--text-primary);
             margin: 0 0 0.75rem 0;
             letter-spacing: -0.01em;
         }
 
         .module-content p {
             color: var(--text-secondary);
+            font-family: var(--font-body);
             line-height: 1.7;
             margin-bottom: 1.75rem;
-            font-size: 0.92rem;
+            font-size: 0.95rem;
+            font-weight: 500;
             min-height: 4.5rem;
         }
 
@@ -138,10 +160,11 @@
         .feature-bullets li {
             display: flex;
             align-items: flex-start;
-            gap: 10px;
+            gap: 12px;
             color: var(--text-secondary);
-            font-size: 0.88rem;
-            margin-bottom: 0.75rem;
+            font-size: 0.9rem;
+            font-weight: 500;
+            margin-bottom: 0.85rem;
             font-family: var(--font-body);
             line-height: 1.5;
         }
@@ -158,9 +181,9 @@
             display: flex;
             align-items: center;
             gap: 8px;
-            font-family: var(--font-body);
-            font-size: 0.88rem;
-            font-weight: 600;
+            font-family: var(--font-display);
+            font-size: 0.95rem;
+            font-weight: 700;
             color: var(--primary);
         }
 
@@ -170,22 +193,29 @@
         }
 
         .module-card:hover .module-action span {
-            transform: translateX(6px);
+            transform: translateX(8px);
         }
 
         .module-badge {
             position: absolute;
-            top: 20px;
-            right: 20px;
-            font-family: var(--font-body);
-            font-size: 11px;
-            font-weight: 600;
-            background: rgba(0, 255, 65, 0.1);
-            color: var(--primary);
-            padding: 4px 10px;
-            border: 1px solid rgba(0, 255, 65, 0.2);
-            border-radius: 20px;
-            letter-spacing: 0.02em;
+            top: 25px;
+            right: 25px;
+            font-family: var(--font-display);
+            font-size: 12px;
+            font-weight: 700;
+            background: var(--bg-sidebar);
+            color: var(--text-primary);
+            padding: 5px 12px;
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            letter-spacing: 0.04em;
+            text-transform: uppercase;
+        }
+        
+        .module-badge.premium {
+            background: var(--text-primary);
+            color: var(--bg-dark);
+            border-color: var(--text-primary);
         }
 
         @media (max-width: 850px) {
@@ -195,30 +225,83 @@
         }
     </style>
 </head>
-<body>
+<body class="data-loaded">
     <!-- Identical Background to Landing Page -->
-    <div class="cyber-bg"></div>
-    <div class="scanlines"></div>
-    <div class="particles"><div class="particle"></div><div class="particle"></div><div class="particle"></div><div class="particle"></div></div>
+    <canvas id="fc-canvas-particles" aria-hidden="true"></canvas>
 
-    <!-- Identical Navbar to Landing Page -->
+    <!-- Background Effects — Firecrawl-Style Layered BG -->
+    <div class="fc-bg-blobs"></div>
+    <div class="fc-grid-overlay"></div>
+    <div class="fc-dots" aria-hidden="true">
+        <span class="fc-dot" style="top:12%;left:8%"></span>
+        <span class="fc-dot" style="top:8%;left:25%"></span>
+        <span class="fc-dot" style="top:18%;left:42%"></span>
+        <span class="fc-dot" style="top:6%;left:58%"></span>
+        <span class="fc-dot" style="top:14%;left:75%"></span>
+        <span class="fc-dot" style="top:10%;left:92%"></span>
+        <span class="fc-dot" style="top:28%;left:16%"></span>
+        <span class="fc-dot" style="top:32%;left:33%"></span>
+        <span class="fc-dot" style="top:24%;left:50%"></span>
+        <span class="fc-dot" style="top:35%;left:66%"></span>
+        <span class="fc-dot" style="top:30%;left:83%"></span>
+        <span class="fc-dot" style="top:45%;left:10%"></span>
+        <span class="fc-dot" style="top:50%;left:25%"></span>
+        <span class="fc-dot" style="top:42%;left:42%"></span>
+        <span class="fc-dot" style="top:55%;left:58%"></span>
+        <span class="fc-dot" style="top:48%;left:75%"></span>
+        <span class="fc-dot" style="top:52%;left:90%"></span>
+        <span class="fc-dot" style="top:65%;left:18%"></span>
+        <span class="fc-dot" style="top:70%;left:35%"></span>
+        <span class="fc-dot" style="top:60%;left:50%"></span>
+        <span class="fc-dot" style="top:72%;left:66%"></span>
+        <span class="fc-dot" style="top:68%;left:82%"></span>
+        <span class="fc-dot" style="top:80%;left:8%"></span>
+        <span class="fc-dot" style="top:85%;left:25%"></span>
+        <span class="fc-dot" style="top:78%;left:42%"></span>
+        <span class="fc-dot" style="top:88%;left:58%"></span>
+        <span class="fc-dot" style="top:82%;left:75%"></span>
+        <span class="fc-dot" style="top:90%;left:92%"></span>
+    </div>
+    <div class="fc-float-labels" aria-hidden="true">
+        <span class="fc-label" style="top:9%;left:5%">[ ENHANCE ]</span>
+        <span class="fc-label" style="top:15%;right:8%">[ 9.2/10 ]</span>
+        <span class="fc-label" style="top:35%;left:3%">[ PIPELINE ]</span>
+        <span class="fc-label" style="top:28%;right:4%">[ .JSON ]</span>
+        <span class="fc-label" style="top:55%;left:6%">[ GEMINI ]</span>
+        <span class="fc-label" style="top:60%;right:6%">[ 200 OK ]</span>
+        <span class="fc-label" style="top:75%;left:4%">[ SCRAPE ]</span>
+        <span class="fc-label" style="top:80%;right:5%">[ MASTER ]</span>
+        <span class="fc-label" style="top:45%;right:2%">[ v2.0 ]</span>
+        <span class="fc-label" style="top:92%;left:8%">[ SCORE ]</span>
+    </div>
+    <div class="fc-ghost-code" aria-hidden="true">
+        <pre>{
+    "prompt": "Write a blog post about AI",
+    "enhanced": "Create a well-structured ...",
+    "model": "gemini-2.0",
+    "status": "200 OK"
+    }</pre>
+    </div>
+    <div class="fc-vignette"></div>
+    <div class="fc-sparks" aria-hidden="true">
+        <span class="fc-spark" style="top:20%;left:22%">✦</span>
+        <span class="fc-spark" style="top:40%;right:18%">✦</span>
+        <span class="fc-spark" style="top:65%;left:30%">✦</span>
+        <span class="fc-spark" style="top:85%;right:25%">✦</span>
+        <span class="fc-spark" style="top:50%;left:60%">✦</span>
+    </div>
+
+    <!-- Choose Navbar -->
     <nav class="navbar" id="navbar">
-        <a href="/index.html" class="nav-brand">
-            <img src="/Public/bot-img.png" alt="PromptX">
-            <span class="nav-brand-text">PROMPTX</span>
+        <a href="/" class="choose-brand" aria-label="PromptX Home">
+            <img src="/Public/PROMPTX-banner.png" alt="PromptX">
         </a>
-        
-        <ul class="nav-links">
-            <li><a href="/chat.html">Playground</a></li>
-            <li><a href="/index.html#features">Features</a></li>
-            <li><a href="/index.html#pricing">Pricing</a></li>
-        </ul>
-        
+
         <div class="nav-actions">
-            <a href="/logout/" class="nav-github" style="border-color: rgba(255,85,85,0.3); color: #ff5555;">
+            <a href="/logout/" class="nav-github" style="color: var(--text-primary);">
                 <span>Logout</span>
             </a>
-            <div class="status-pill" style="margin-left: 1rem; background: rgba(0,255,65,0.1); padding: 0.5rem 1rem; border-radius: 8px; font-family: var(--font-mono); font-size: 11px; color: var(--primary); border: 1px solid rgba(0,255,65,0.2);">
+            <div class="status-pill" style="margin-left: 1rem; background: var(--bg-sidebar); padding: 0.5rem 1rem; border-radius: var(--radius-sm); font-family: var(--font-mono); font-weight: bold; font-size: 12px; color: var(--primary); border: 1px solid var(--border);">
                 ONLINE: {{ user.username }}
             </div>
         </div>
@@ -271,8 +354,8 @@
 
                 <!-- Option 2: Full Stack App Builder -->
                 <div class="module-card" onclick="window.location.href='/pricing.html'">
-                    <div class="module-badge" style="color: #f1fa8c; border-color: rgba(241, 250, 140, 0.3);">Premium</div>
-                    <div class="module-icon" style="color: #f1fa8c; filter: drop-shadow(0 0 8px rgba(241, 250, 140, 0.4));">
+                    <div class="module-badge premium">Premium</div>
+                    <div class="module-icon">
                         <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="16 18 22 12 16 6"></polyline><polyline points="8 6 2 12 8 18"></polyline></svg>
                     </div>
                     <div class="module-content">
@@ -301,12 +384,13 @@
                             </li>
                         </ul>
                     </div>
-                    <div class="module-action" style="color: #f1fa8c;">
+                    <div class="module-action">
                         Upgrade to unlock <span>&rarr;</span>
                     </div>
                 </div>
             </div>
         </div>
     </main>
+    <script src="/scripts/index.js"></script>
 </body>
 </html>

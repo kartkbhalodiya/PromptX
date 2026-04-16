@@ -26,6 +26,7 @@ urlpatterns = [
     path('ab-test', views.ab_test_view, name='ab-test'),
     path('analyze-url', views.analyze_url_view, name='analyze-url'),
     path('web-search', views.web_search_view, name='web-search'),
+    path('ideas', views.ideas_view, name='ideas'),
     path('quick-login/', quick_login, name='quick-login'),
     
     # Auth endpoints

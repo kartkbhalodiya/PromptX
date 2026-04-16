@@ -537,7 +537,7 @@ Structure the final output as a comprehensive, highly-organized technical docume
     ```d2
     [Your D2 code here]
     ```
-    D2 Syntax: `NodeName: { shape: person; label: "Label Name" }`. Use `->` for connections. NO ASCII ART.
+    D2 Syntax: `NodeName: {{ shape: person; label: "Label Name" }}`. Use `->` for connections. NO ASCII ART.
 4. **Action Steps**: Step-by-step breakdown of how the task should be executed.
 5. **Tone & Constraints**: Explicit boundaries, technologies, and styling rules.
 6. **Extras/Examples**: Include edge cases or output format specifications.

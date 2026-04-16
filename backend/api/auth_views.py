@@ -99,12 +99,17 @@ def register_view(request):
         otp = generate_otp()
         cache.set(f'otp_{email}', otp, timeout=600)  # 10 minutes
         
+        print(f"\n" + "="*50)
+        print(f"OTP VERIFICATION CODE FOR {email}")
+        print(f"   Your OTP is: {otp}")
+        print(f"   (Valid for 10 minutes)")
+        print(f"="*50 + "\n")
+        
         # Send OTP email
         success, msg = send_otp_email(email, otp)
         
         if not success:
             # For demo, return OTP in response if email fails
-            print(f"OTP for {email}: {otp}")
             return JsonResponse({
                 'success': True, 
                 'message': 'OTP sent (check server console for demo)',
@@ -187,11 +192,16 @@ def resend_otp_view(request):
         otp = generate_otp()
         cache.set(f'otp_{email}', otp, timeout=600)
         
+        print(f"\n" + "="*50)
+        print(f"RESEND OTP FOR {email}")
+        print(f"   Your OTP is: {otp}")
+        print(f"   (Valid for 10 minutes)")
+        print(f"="*50 + "\n")
+        
         # Send OTP email
         success, msg = send_otp_email(email, otp)
         
         if not success:
-            print(f"OTP for {email}: {otp}")
             return JsonResponse({
                 'success': True, 
                 'message': 'OTP resent (check server console)',

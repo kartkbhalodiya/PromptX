@@ -89,6 +89,16 @@ INTENT_PATTERNS = {
         ],
         'weight': 0.9,
     },
+    'idea': {
+        'keywords': [
+            'idea', 'ideas', 'suggest', 'suggest me', 'give me ideas',
+            'business idea', 'project idea', 'startup', 'opportunity',
+            'side hustle', 'make money', 'income', 'profit', 'grossing',
+            'best idea', 'new idea', 'innovation', 'creative idea',
+            'money making', 'earn', 'revenue', 'passive income',
+        ],
+        'weight': 1.3,
+    },
 }
 
 # ═══════════════════════════════════════════════════════════
@@ -179,6 +189,15 @@ DOMAIN_PATTERNS = {
             'feature engineering', 'classification', 'regression',
         ],
         'weight': 1.1,
+    },
+    'money': {
+        'keywords': [
+            'money', 'income', 'profit', 'revenue', 'earn', 'making money',
+            'grossing', 'business', 'startup', 'side hustle', 'passive income',
+            'investment', 'roi', 'wealth', 'financial', 'entrepreneur',
+            'opportunity', 'market', 'customer', 'sales', 'growth',
+        ],
+        'weight': 1.2,
     },
 }
 
@@ -425,6 +444,10 @@ ENHANCEMENT_STRUCTURES = {
     'research': [
         'role', 'research_topic', 'scope', 'sources',
         'depth', 'output_format', 'citations',
+    ],
+    'idea': [
+        'role', 'idea_topic', 'category', 'target_audience',
+        'constraints', 'quantity', 'detail_level', 'evaluation_criteria',
     ],
 }
 
